@@ -3,7 +3,7 @@ const path = require('path');
 
 // const app = express();
 const server = require('http').createServer(app);
-const io  =require('socket.io')(server);
+const io = require('socket.io')(server);
 
 // app.use(express.static(path.join(__dirname, 'public')));
 app.set('views', path.join(__dirname, 'public'));
@@ -16,20 +16,45 @@ app.use('/', (req, res) => {
 
 let messages = [];
 
-io.on('connection', socket => {
-    console.log(`Id: ${socket.id}` );
+var roomName = 'Sala1';
 
-    socket.emit('previousMessage', messages);
+// io.on('connection', socket => {
+//     console.log(`Id: ${socket.id}` );
 
-    socket.on('sendMessage', data => {
-        messages.push(data);
-        socket.broadcast.in('room1').emit('sendMessage', data);
-    })
+//     socket.emit('previousMessage', messages);
+
+//     socket.on('sendMessage', data => {
+//         messages.push(data);
+//         socket.broadcast.emit('sendMessage', data);
+//     })
+// });
+
+// io.on('disconnect', function(eve){
+//     console.log(eve);
+// });
+
+// server side code
+io.sockets.on('connection', function (socket) {
+    socket.on('create', function (room) {
+        socket.join(room, function () {
+            console.log(`Id: ${socket.id} Sala: ${room}`);
+            socket.broadcast.to(room).emit('sendMessage', 'carregando...');
+        });
+
+        socket.on('sendMessage', data => {
+                    messages.push(data);
+                    socket.broadcast.to(room).emit('sendMessage', data);
+                });
+                
+        io.sockets.in(room).emit('previousMessage', messages);
+
+        io.sockets.in(room).on('sendMessage', data => {
+            messages.push(data);
+            socket.broadcast.to(room).emit('sendMessage', data);
+        });
+    });
 });
 
-
-io.on('disconnect', function(eve){
-    console.log(eve);
+server.listen(3000, data => {
+    console.log('Server on 3000');
 });
-
-server.listen(80);

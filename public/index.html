@@ -23,17 +23,13 @@
                   <textarea id="my-textarea" readonly class="form-control" name="" rows="10"></textarea>
               </div>
               <button type="submit">Enviar</button>
+              <button type="button" id='logIn'>Entrar</button>
               <button type="button" id='disconectar'>disconectar</button>
             </div>
         </form>
     </div>
     <script>
-        var socket = io();
-
-        function renderMessage(message){
-            $('#my-textarea').val($('#my-textarea').val() + '[' + message.user + ']['+dataAtual()+']: ' + message.message + "\n");
-        }
-
+        
         function dataAtual(){
             var dataAtual = new Date();
             var dia = (dataAtual.getDate()<10 ? '0' : '') + dataAtual.getDate();
@@ -46,25 +42,32 @@
             var dataFormatada = dia + "." + mes + "." + ano + " " + hora + ":" + minuto + ":" + segundo;
             return dataFormatada;
         }
-
+        
         function getQueryParams(qs) {
             qs = qs.split('+').join(' ');
-
+            
             var params = {},
-                tokens,
-                re = /[?&]?([^=]+)=([^&]*)/g;
-
+            tokens,
+            re = /[?&]?([^=]+)=([^&]*)/g;
+            
             while (tokens = re.exec(qs)) {
                 params[decodeURIComponent(tokens[1])] = decodeURIComponent(tokens[2]);
             }
-
+            
             return params;
         }
+        
+        var socket = io();
 
-        let group = getQueryParams(document.location.search).b;
+        function renderMessage(message){
+            $('#my-textarea').val($('#my-textarea').val() + '[' + message.user + ']['+dataAtual()+']: ' + message.message + "\n");
+        }
+        
+        let room = getQueryParams(document.location.search).b;
 
         socket.on('sendMessage', function(message){
             renderMessage(message);
+            console.log(message);
         });
 
         socket.on( 'previousMessage', function(messages){
@@ -74,8 +77,12 @@
         });
         
         $('#disconectar').on('click', saiu => {
-            socket.disconnect();
-        })
+            socket.leave();
+        });
+
+        $('#logIn').on('click', entrar => {
+            socket.emit('create', room);
+        });
         
         $('#chat').submit(function(event){
             event.preventDefault();
@@ -87,10 +94,11 @@
                 var messageObject = {
                     user: user,
                     message: message,
-                    group: group
+                    room: room
                 }
                 renderMessage(messageObject);
                 socket.emit('sendMessage', messageObject);
+                socket.on('readMessages', messageObject);
             }
         });
     </script>
