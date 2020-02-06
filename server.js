@@ -38,16 +38,10 @@ io.sockets.on('connection', function (socket) {
     socket.on('create', function (room) {
         socket.join(room, function () {
             console.log(`Id: ${socket.id} Sala: ${room}`);
+            io.sockets.to(socket.id).emit('previousMessage', messages);
         });
 
         socket.on('sendMessage', data => {
-            messages.push(data);
-            socket.broadcast.to(room).emit('sendMessage', data);
-        });
-                
-        io.sockets.in(room).emit('previousMessage', messages);
-
-        io.sockets.in(room).on('sendMessage', data => {
             messages.push(data);
             socket.broadcast.to(room).emit('sendMessage', data);
         });

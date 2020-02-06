@@ -23,7 +23,6 @@
                   <textarea id="my-textarea" readonly class="form-control" name="" rows="10"></textarea>
               </div>
               <button type="submit">Enviar</button>
-              <button type="button" id='logIn'>Entrar</button>
               <button type="button" id='disconectar'>disconectar</button>
             </div>
         </form>
@@ -76,10 +75,10 @@
         });
         
         $('#disconectar').on('click', saiu => {
-            socket.leave();
+            socket.leave(room);
         });
 
-        $('#logIn').on('click', entrar => {
+        $(document).ready(function () {
             socket.emit('create', room);
         });
         
@@ -97,7 +96,6 @@
                 }
                 renderMessage(messageObject);
                 socket.emit('sendMessage', messageObject);
-                socket.on('readMessages', messageObject);
             }
         });
     </script>
