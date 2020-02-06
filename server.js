@@ -16,23 +16,6 @@ app.use('/', (req, res) => {
 
 let messages = [];
 
-var roomName = 'Sala1';
-
-// io.on('connection', socket => {
-//     console.log(`Id: ${socket.id}` );
-
-//     socket.emit('previousMessage', messages);
-
-//     socket.on('sendMessage', data => {
-//         messages.push(data);
-//         socket.broadcast.emit('sendMessage', data);
-//     })
-// });
-
-// io.on('disconnect', function(eve){
-//     console.log(eve);
-// });
-
 // server side code
 io.sockets.on('connection', function (socket) {
     socket.on('create', function (room) {
