@@ -2,6 +2,7 @@
   "dependencies": {
     "ejs": "^3.0.1",
     "express": "^4.17.1",
+    "mysql": "github:mysqljs/mysql",
     "socket.io": "^2.3.0"
   }
 }

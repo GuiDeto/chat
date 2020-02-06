@@ -1,103 +1,147 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <title>Chat</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.4.1/css/bootstrap.min.css">
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.4.1/css/bootstrap.min.css"
+    />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.4.1/js/bootstrap.min.js"></script>
-
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <form action="" id="chat">
-            <div class="form-group">
-              <label for=""></label>
-              <input type="text" name="user" class="form-control" placeholder="Usuário" aria-describedby="helpId">
-              <input type="text" name="message" class='form-control mt-2' placeholder="Mensagem">
-              <div class="form-group">
-                  <label for="my-textarea">Mensagens</label>
-                  <textarea id="my-textarea" readonly class="form-control" name="" rows="10"></textarea>
-              </div>
-              <button type="submit">Enviar</button>
-              <button type="button" id='disconectar'>disconectar</button>
-            </div>
-        </form>
+      <form action="" id="chat">
+        <div class="form-group">
+          <label for=""></label>
+          <input
+            type="text"
+            name="user"
+            class="form-control"
+            placeholder="Usuário"
+            aria-describedby="helpId"
+          />
+          <input
+            type="text"
+            name="message"
+            class="form-control mt-2"
+            placeholder="Mensagem"
+          />
+          <div class="form-group">
+            <label for="my-textarea">Mensagens</label>
+            <textarea
+              id="my-textarea"
+              readonly
+              class="form-control"
+              name=""
+              rows="10"
+            ></textarea>
+          </div>
+          <button type="submit">Enviar</button>
+          <button type="button" id="disconectar">disconectar</button>
+        </div>
+      </form>
     </div>
     <script>
-        
-        function dataAtual(){
-            var dataAtual = new Date();
-            var dia = (dataAtual.getDate()<10 ? '0' : '') + dataAtual.getDate();
-            var mes = ((dataAtual.getMonth() + 1)<10 ? '0' : '') + (dataAtual.getMonth() + 1);
-            var ano = dataAtual.getFullYear();
-            var hora = (dataAtual.getHours()<10 ? '0' : '') + dataAtual.getHours();
-            var minuto = (dataAtual.getMinutes()<10 ? '0' : '') + dataAtual.getMinutes();
-            var segundo = (dataAtual.getSeconds()<10 ? '0' : '') + dataAtual.getSeconds();
-            
-            var dataFormatada = dia + "." + mes + "." + ano + " " + hora + ":" + minuto + ":" + segundo;
-            return dataFormatada;
+      function dataAtual() {
+        var dataAtual = new Date();
+        var dia = (dataAtual.getDate() < 10 ? "0" : "") + dataAtual.getDate();
+        var mes =
+          (dataAtual.getMonth() + 1 < 10 ? "0" : "") +
+          (dataAtual.getMonth() + 1);
+        var ano = dataAtual.getFullYear();
+        var hora =
+          (dataAtual.getHours() < 10 ? "0" : "") + dataAtual.getHours();
+        var minuto =
+          (dataAtual.getMinutes() < 10 ? "0" : "") + dataAtual.getMinutes();
+        var segundo =
+          (dataAtual.getSeconds() < 10 ? "0" : "") + dataAtual.getSeconds();
+
+        var dataFormatada =
+          dia +
+          "." +
+          mes +
+          "." +
+          ano +
+          " " +
+          hora +
+          ":" +
+          minuto +
+          ":" +
+          segundo;
+        return dataFormatada;
+      }
+
+      function getQueryParams(qs) {
+        qs = qs.split("+").join(" ");
+
+        var params = {},
+          tokens,
+          re = /[?&]?([^=]+)=([^&]*)/g;
+
+        while ((tokens = re.exec(qs))) {
+          params[decodeURIComponent(tokens[1])] = decodeURIComponent(tokens[2]);
         }
-        
-        function getQueryParams(qs) {
-            qs = qs.split('+').join(' ');
-            
-            var params = {},
-            tokens,
-            re = /[?&]?([^=]+)=([^&]*)/g;
-            
-            while (tokens = re.exec(qs)) {
-                params[decodeURIComponent(tokens[1])] = decodeURIComponent(tokens[2]);
-            }
-            
-            return params;
+
+        return params;
+      }
+
+      var socket = io();
+
+      function renderMessage(message) {
+        $("#my-textarea").val(
+          $("#my-textarea").val() +
+            "[" +
+            message.user +
+            "][" +
+            message.date +
+            "]: " +
+            message.message +
+            "\n"
+        );
+      }
+
+      let room = getQueryParams(document.location.search).b;
+
+      socket.on("sendMessage", function(message) {
+        renderMessage(message);
+      });
+
+      socket.on("previousMessage", function(messages) {
+          console.log(messages);
+        for (message of messages) {
+          renderMessage(message);
         }
-        
-        var socket = io();
+      });
 
-        function renderMessage(message){
-            $('#my-textarea').val($('#my-textarea').val() + '[' + message.user + ']['+dataAtual()+']: ' + message.message + "\n");
+      $("#disconectar").on("click", saiu => {
+        socket.leave(room);
+      });
+
+      $(document).ready(function() {
+        socket.emit("create", room);
+      });
+
+      $("#chat").submit(function(event) {
+        event.preventDefault();
+
+        var user = $("input[name=user]").val();
+        var message = $("input[name=message]").val();
+
+        if (user.length && message.length) {
+          var messageObject = {    
+                user: user,
+                message: message,
+                room: room
+            };
+          renderMessage(messageObject);
+          socket.emit("sendMessage", messageObject);
         }
-        
-        let room = getQueryParams(document.location.search).b;
-
-        socket.on('sendMessage', function(message){
-            renderMessage(message);
-        });
-
-        socket.on( 'previousMessage', function(messages){
-            for(message of messages){
-                renderMessage(message);
-            }
-        });
-        
-        $('#disconectar').on('click', saiu => {
-            socket.leave(room);
-        });
-
-        $(document).ready(function () {
-            socket.emit('create', room);
-        });
-        
-        $('#chat').submit(function(event){
-            event.preventDefault();
-            
-            var user = $('input[name=user]').val();
-            var message = $('input[name=message]').val();
-
-            if (user.length && message.length){
-                var messageObject = {
-                    user: user,
-                    message: message,
-                    room: room
-                }
-                renderMessage(messageObject);
-                socket.emit('sendMessage', messageObject);
-            }
-        });
+      });
     </script>
-</body>
+  </body>
 </html>
