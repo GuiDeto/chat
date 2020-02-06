@@ -21,7 +21,7 @@ io.sockets.on('connection', function (socket) {
     socket.on('create', function (room) {
         socket.join(room, function () {
             console.log(`Id: ${socket.id} Sala: ${room}`);
-            io.sockets.to(socket.id).emit('previousMessage', messages);
+            if(messages.room == room)io.sockets.to(socket.id).emit('previousMessage', messages);
         });
 
         socket.on('sendMessage', data => {
