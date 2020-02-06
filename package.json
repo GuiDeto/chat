@@ -1,4 +1,10 @@
 {
+  "name": "Chat multi rooms",
+  "description": "Modelo de chat com varias salas",
+  "version": "1.0.0",
+  "engines": {
+    "node": "12.13.0"
+  },
   "dependencies": {
     "ejs": "^3.0.1",
     "express": "^4.17.1",
