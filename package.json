@@ -1,22 +1,27 @@
 {
-  "name": "Chat multi rooms",
-  "description": "Modelo de chat com varias salas",
+  "name": "chat",
   "version": "1.0.0",
-  "engines": {
-    "node": "12.13.0"
-  },
-  "license": "MIT",
+  "description": "",
+  "main": "server.js",
   "scripts": {
-    "dev" : "nodemon server.js",
-    "start" : "node server.js"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GuiDeto/chat.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/GuiDeto/chat/issues"
+  },
+  "homepage": "https://github.com/GuiDeto/chat#readme",
   "dependencies": {
     "ejs": "^3.0.1",
     "express": "^4.17.1",
-    "mysql": "github:mysqljs/mysql",
+    "mysql": "^2.18.1",
     "socket.io": "^2.3.0"
-  },
-  "devDependencies" : {
-    "nodemon":"^1.18.9"
   }
 }
