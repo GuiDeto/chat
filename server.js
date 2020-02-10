@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const mongoose = require('mongoose');
@@ -6,7 +7,7 @@ const db = mongoose.connection;
 var dbName = 'chat_sisc';
 
 mongoose.connect(
-    'mongodb+srv://detonix:Shaker28%23%21@cluster0-fnhrs.mongodb.net/' + dbName + '?retryWrites=true&w=majority', {
+    process.env.MONGO_URL, {
         useNewUrlParser: true,
         useUnifiedTopology: true
     });
@@ -66,7 +67,7 @@ io.sockets.on('connection', function (socket) {
     });
 });
 
-const loadApp = server.listen(3000, () => {
+const loadApp = server.listen(process.env.PORT || 3000, () => {
     console.log('Server on port: ' + loadApp.address().port);
 });
 
