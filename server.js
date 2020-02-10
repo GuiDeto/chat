@@ -1,10 +1,9 @@
-require('dotenv').config();
+// require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 const db = mongoose.connection;
-var dbName = 'chat_sisc';
 
 mongoose.connect(
     process.env.MONGO_URL, {
