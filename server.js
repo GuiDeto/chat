@@ -1,17 +1,37 @@
 const express = require('express');
 const path = require('path');
-var mysql = require('mysql');
+const mongoose = require('mongoose');
+var Schema = mongoose.Schema;
+const db = mongoose.connection;
+var dbName = 'chat_sisc';
 
-var con = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'chatdb'
-});
-con.connect(function (err) {
-    if (err) throw err;
+mongoose.connect(
+    'mongodb+srv://detonix:Shaker28%23%21@cluster0-fnhrs.mongodb.net/' + dbName + '?retryWrites=true&w=majority', {
+        useNewUrlParser: true,
+        useUnifiedTopology: true
+    });
+
+var userDataSchema = new Schema({
+    user: {
+        type: String,
+        required: true
+    },
+    room: {
+        type: String,
+        required: true
+    },
+    message: {
+        type: String,
+        required: true
+    },
+    send_date: {
+        type: Date,
+        required: true,
+        default: Date.now
+    }
 });
 
+const saveChat = mongoose.model('posts', userDataSchema);
 const app = express();
 const server = require('http').createServer(app);
 const io = require('socket.io')(server);
@@ -26,12 +46,12 @@ app.use('/', (req, res) => {
     res.render('index.html');
 });
 
-// app.use('/js', express.static(path.join(__dirname, '/public/js')))
-
 io.sockets.on('connection', function (socket) {
     socket.on('create', function (room) {
         socket.join(room, function () {
-            console.log(`Id: ${socket.id} Sala: ${room}`);
+            db.once('open', function () {
+                console.log(`Conexão estabelecida id: ${socket.id} Sala: ${room}`);
+            });
             showOldMessagesChat(room, socket.id);
         });
     });
@@ -52,18 +72,32 @@ const loadApp = server.listen(3000, () => {
 
 function showOldMessagesChat(r, sckId) {
     let dados = [];
-    con.query("SELECT * FROM chat WHERE room='" + r + "'", function (err, result) {
+
+    saveChat.find({
+        room: r
+    }, function (err, docs) {
         if (err) throw err;
-        for (message of result) {
-            dados.push( {"user":message.user, "date":message.date_add_message,"message":message.message} );
+        for (message of docs) {
+            dados.push({
+                "user": message.user,
+                "date": message.date_add_message,
+                "message": message.message
+            });
         }
         io.sockets.in(sckId).emit('previousMessage', dados);
     });
 }
 
 function insertMessageDB(r, u, m) {
-    con.query('INSERT INTO chat (room, user, message) VALUES (\'' + r + '\',\'' + u + '\',\'' + m + '\')', function (error, results, fields) {
-        if (error) throw error;
-        if (results.affectedRows) console.log('Cadastro inserido no banco!');
+    var sendData = {
+        user: u,
+        room: r,
+        message: m
+    };
+
+    var data = new saveChat(sendData);
+    data.save(function (err, chatMessage) {
+        if (err) return console.error(err);
+        console.log(chatMessage);
     });
 }
