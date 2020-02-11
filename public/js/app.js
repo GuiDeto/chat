@@ -1,32 +1,32 @@
 
-function dataAtual(dataAtual) {
+function timeSince(date) {
 
-    var dia = (dataAtual.getDate() < 10 ? "0" : "") + dataAtual.getDate();
-    var mes =
-        (dataAtual.getMonth() + 1 < 10 ? "0" : "") +
-        (dataAtual.getMonth() + 1);
-    var ano = dataAtual.getFullYear();
-    var hora =
-        (dataAtual.getHours() < 10 ? "0" : "") + dataAtual.getHours();
-    var minuto =
-        (dataAtual.getMinutes() < 10 ? "0" : "") + dataAtual.getMinutes();
-    var segundo =
-        (dataAtual.getSeconds() < 10 ? "0" : "") + dataAtual.getSeconds();
+    var seconds = Math.floor((new Date() - new Date(date)) / 1000);
+  
+    var interval = Math.floor(seconds / 31536000);
+  
+    if (interval > 1) {
+      return interval + " anos";
+    }
+    interval = Math.floor(seconds / 2592000);
+    if (interval > 1) {
+      return interval + " meses";
+    }
+    interval = Math.floor(seconds / 86400);
+    if (interval > 1) {
+      return interval + " dias";
+    }
+    interval = Math.floor(seconds / 3600);
+    if (interval > 1) {
+      return interval + " horas";
+    }
+    interval = Math.floor(seconds / 60);
+    if (interval > 1) {
+      return interval + " minutos";
+    }
+    return Math.floor(seconds) + " segundos";
+  }
 
-    var dataFormatada =
-        dia +
-        "." +
-        mes +
-        "." +
-        ano +
-        " " +
-        hora +
-        ":" +
-        minuto +
-        ":" +
-        segundo;
-    return dataFormatada;
-}
 
 function getQueryParams(qs) {
     qs = qs.split("+").join(" ");
@@ -45,19 +45,16 @@ function getQueryParams(qs) {
 var socket = io();
 
 function renderMessage(message) {
-    $("#my-textarea").val(
-        $("#my-textarea").val() +
-        "[" +
-        message.user +
-        "][" +
-        message.date +
-        "]: " +
-        message.message +
-        "\n"
+    
+    var texto_people = '<div class="d-flex justify-content-start mb-4"><div class="img_cont_msg"><img src="https://i.pinimg.com/280x280_RS/57/a9/77/57a9776d4f78ab1dc2d87a0bf65eb97b.jpg" class="rounded-circle user_img_msg"></div><div class="msg_cotainer">'+message.message+'<span class="msg_time">'+timeSince(message.date)+'</span></div></div>';
+    var text_me = '<div class="d-flex justify-content-end mb-4"><div class="msg_cotainer_send">'+
+    message.message +'<span class="msg_time_send">'+timeSince(message.date)+'</span></div><div class="img_cont_msg"><img src="https://generali.mediargroup.com.br/assets/img/users/1.jpg" class="rounded-circle user_img_msg"></div></div>';
+
+    var usrMsg = message.user != 'Detonix'?texto_people:text_me;
+    $("#historyMessage").append(
+        usrMsg
     );
 }
-
-
 
 socket.on("sendMessage", function (message) {
     renderMessage(message);
@@ -69,10 +66,6 @@ socket.on("previousMessage", function (messages) {
     }
 });
 
-$("#disconectar").on("click", saiu => {
-    socket.leave(room);
-});
-
 let room = getQueryParams(document.location.search).b;
 
 $(document).ready(function () {
@@ -80,15 +73,15 @@ $(document).ready(function () {
 
         socket.emit("create", room);
 
-        document.getElementById('chatSisc').innerHTML = '<div class="form-group"> <label for=""></label> <input type="text" name="user" class="form-control" placeholder="Usuário" aria-describedby="helpId"/> <input type="text" name="message" class="form-control mt-2" placeholder="Mensagem" id="writeMsg"/> <div class="form-group"> <label for="my-textarea">Mensagens</label> <textarea id="my-textarea" readonly class="form-control" name="" rows="10" ></textarea> </div><button type="button" onclick="sendMessage()">Enviar</button> </div>';
     }
 });
 
 function sendMessage() {
-    var user = $("input[name=user]").val();
-    var message = $("input[name=message]").val();
+    var user = 'fulano';
+    var message = $("textarea[name=message]").val();
 
     if (user.length && message.length) {
+        var d = new Date();
         var messageObject = {
             user: user,
             message: message,
@@ -96,5 +89,6 @@ function sendMessage() {
         };
         renderMessage(messageObject);
         socket.emit("sendMessage", messageObject);
+        $("textarea[name=message]").val('');
     }
 }

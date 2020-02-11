@@ -1,9 +1,11 @@
 require('dotenv').config();
 const express = require('express');
+var router = express.Router();
 const path = require('path');
 const mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 const db = mongoose.connection;
+const async = require('async');
 
 mongoose.connect(
     process.env.MONGO_URL, {
@@ -40,6 +42,7 @@ app.set('views', path.join(__dirname, 'public'));
 app.engine('html', require('ejs').renderFile);
 
 app.use('/scripts', express.static(path.join(__dirname, 'public/js')));
+app.use('/styles', express.static(path.join(__dirname, 'public/css')));
 
 app.use('/', (req, res) => {
     res.render('index.html');
@@ -63,10 +66,7 @@ io.sockets.on('connection', function (socket) {
 
         socket.broadcast.in(data.room).emit('sendMessage', data);
     });
-    socket.on('typing', (data)=>{
-        if(data.typing==true)
-           console.log(data);
-      })
+
 });
 
 const loadApp = server.listen(process.env.PORT || 3000, () => {
@@ -83,8 +83,8 @@ function showOldMessagesChat(r, sckId) {
         for (message of docs) {
             dados.push({
                 "user": message.user,
-                "date": message.date_add_message,
-                "message": message.message
+                "message": message.message,
+                "date": message.send_date
             });
         }
         io.sockets.in(sckId).emit('previousMessage', dados);
