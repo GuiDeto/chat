@@ -57,7 +57,7 @@ function renderMessage(message) {
     );
 }
 
-let room = getQueryParams(document.location.search).b;
+
 
 socket.on("sendMessage", function (message) {
     renderMessage(message);
@@ -73,27 +73,28 @@ $("#disconectar").on("click", saiu => {
     socket.leave(room);
 });
 
+let room = getQueryParams(document.location.search).b;
+
 $(document).ready(function () {
     if (room != undefined && room.match("sala[1-9]") != null) {
 
         socket.emit("create", room);
-        $("#chat").submit(function (event) {
-            event.preventDefault();
 
-            var user = $("input[name=user]").val();
-            var message = $("input[name=message]").val();
-
-            if (user.length && message.length) {
-                var messageObject = {
-                    user: user,
-                    message: message,
-                    room: room
-                };
-                renderMessage(messageObject);
-                socket.emit("sendMessage", messageObject);
-            }
-        });
-        document.getElementById('chatSisc').innerHTML = '<form id="chat"> <div class="form-group"> <label for=""></label> <input type="text" name="user" class="form-control" placeholder="Usuário" aria-describedby="helpId"/> <input type="text" name="message" class="form-control mt-2" placeholder="Mensagem" id="writeMsg"/> <div class="form-group"> <label for="my-textarea">Mensagens</label> <textarea id="my-textarea" readonly class="form-control" name="" rows="10" ></textarea> </div><button type="submit">Enviar</button> </div></form>';
+        document.getElementById('chatSisc').innerHTML = '<div class="form-group"> <label for=""></label> <input type="text" name="user" class="form-control" placeholder="Usuário" aria-describedby="helpId"/> <input type="text" name="message" class="form-control mt-2" placeholder="Mensagem" id="writeMsg"/> <div class="form-group"> <label for="my-textarea">Mensagens</label> <textarea id="my-textarea" readonly class="form-control" name="" rows="10" ></textarea> </div><button type="button" onclick="sendMessage()">Enviar</button> </div>';
     }
-    writeMsg();
 });
+
+function sendMessage() {
+    var user = $("input[name=user]").val();
+    var message = $("input[name=message]").val();
+
+    if (user.length && message.length) {
+        var messageObject = {
+            user: user,
+            message: message,
+            room: room
+        };
+        renderMessage(messageObject);
+        socket.emit("sendMessage", messageObject);
+    }
+}
