@@ -1,4 +1,4 @@
-// require('dotenv').config();
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const mongoose = require('mongoose');
@@ -38,7 +38,6 @@ const io = require('socket.io')(server);
 
 app.set('views', path.join(__dirname, 'public'));
 app.engine('html', require('ejs').renderFile);
-// app.set('view engine', 'html');
 
 app.use('/scripts', express.static(path.join(__dirname, 'public/js')));
 
@@ -64,6 +63,10 @@ io.sockets.on('connection', function (socket) {
 
         socket.broadcast.in(data.room).emit('sendMessage', data);
     });
+    socket.on('typing', (data)=>{
+        if(data.typing==true)
+           console.log(data);
+      })
 });
 
 const loadApp = server.listen(process.env.PORT || 3000, () => {
@@ -98,6 +101,5 @@ function insertMessageDB(r, u, m) {
     var data = new saveChat(sendData);
     data.save(function (err, chatMessage) {
         if (err) return console.error(err);
-        console.log(chatMessage);
     });
 }
