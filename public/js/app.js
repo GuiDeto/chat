@@ -24,6 +24,9 @@ function timeSince(date) {
     if (interval > 1) {
       return interval + " minutos";
     }
+    if(interval = NaN){
+      return "agora";
+    }
     return Math.floor(seconds) + " segundos";
   }
 
@@ -43,21 +46,43 @@ function getQueryParams(qs) {
 }
 
 var socket = io();
+var room = getQueryParams(document.location.search).b;
+var user = getQueryParams(document.location.search).u;
 
 function renderMessage(message) {
-    
-    var texto_people = '<div class="d-flex justify-content-start mb-4"><div class="img_cont_msg"><img src="https://i.pinimg.com/280x280_RS/57/a9/77/57a9776d4f78ab1dc2d87a0bf65eb97b.jpg" class="rounded-circle user_img_msg"></div><div class="msg_cotainer">'+message.message+'<span class="msg_time">'+timeSince(message.date)+'</span></div></div>';
+    var texto_people = '<div class="d-flex justify-content-start mb-4"><div class="img_cont_msg"><img src="'+message.img+'" class="rounded-circle user_img_msg"></div><div class="msg_cotainer">'+message.message+'<span class="msg_time">'+timeSince(message.date)+'</span></div></div>';
     var text_me = '<div class="d-flex justify-content-end mb-4"><div class="msg_cotainer_send">'+
-    message.message +'<span class="msg_time_send">'+timeSince(message.date)+'</span></div><div class="img_cont_msg"><img src="https://generali.mediargroup.com.br/assets/img/users/1.jpg" class="rounded-circle user_img_msg"></div></div>';
+    message.message +'<span class="msg_time_send">'+timeSince(message.date)+'</span></div><div class="img_cont_msg"><img src="'+message.img+'" class="rounded-circle user_img_msg"></div></div>';
 
-    var usrMsg = message.user != 'Detonix'?texto_people:text_me;
+    var usrMsg=message.cod!=user?texto_people:text_me;
     $("#historyMessage").append(
         usrMsg
     );
 }
 
+function loadUsers(users){
+  var userRoom = '';
+  for (const user of users) {
+    userRoom += '<li class="active"><div class="d-flex bd-highlight"><div class="img_cont"><img src="'+user.img+'" class="rounded-circle user_img"><span class="online_icon"></span></div><div class="user_info"><span>'+user.name+'</span><p>'+user.cargo+'</p></div></div></li>';
+  }
+  $('#usersRoom').html(userRoom);
+  // online_icon offline
+}
+
+function loadMyPicture(i){
+  $('#myPicture').html('<img src="'+i+'" class="rounded-circle user_img" /><span class="online_icon"></span>');
+}
+
 socket.on("sendMessage", function (message) {
     renderMessage(message);
+});
+
+socket.on("loadMyPicture", function (i) {
+  loadMyPicture(i.img);
+});
+
+socket.on("loadUsersRoom", function (users) {
+    loadUsers(users);
 });
 
 socket.on("previousMessage", function (messages) {
@@ -66,28 +91,21 @@ socket.on("previousMessage", function (messages) {
     }
 });
 
-let room = getQueryParams(document.location.search).b;
-
 $(document).ready(function () {
     if (room != undefined && room.match("sala[1-9]") != null) {
-
-        socket.emit("create", room);
-
+        socket.emit("create", {room: room, user: user});
     }
 });
 
 function sendMessage() {
-    var user = 'fulano';
     var message = $("textarea[name=message]").val();
 
     if (user.length && message.length) {
-        var d = new Date();
         var messageObject = {
-            user: user,
+            cod: user,
             message: message,
             room: room
         };
-        renderMessage(messageObject);
         socket.emit("sendMessage", messageObject);
         $("textarea[name=message]").val('');
     }
