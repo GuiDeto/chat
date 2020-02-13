@@ -109,22 +109,23 @@ function showOldMessagesChat(r, sckId) {
             room: r
         }).limit(1).toArray(function (err, docs) {
             if (err) throw err;
-            var roomData = docs[0];
-
-            for (const roomMsg of roomData.posts) {
-                var i = searchJSON(roomData.users, roomMsg.user);
-                if (i > -1) {
-                    dados.push({
-                        "user": roomData.users[i].name,
-                        "message": roomMsg.message,
-                        "date": roomMsg.date_add,
-                        "img": roomData.users[i].img,
-                        "cod": roomData.users[i].cod
-                    });
+            var roomData = docs[0].posts;
+            if(roomData.length){
+                for (const roomMsg of roomData.posts) {
+                    var i = searchJSON(roomData.users, roomMsg.user);
+                    if (i > -1) {
+                        dados.push({
+                            "user": roomData.users[i].name,
+                            "message": roomMsg.message,
+                            "date": roomMsg.date_add,
+                            "img": roomData.users[i].img,
+                            "cod": roomData.users[i].cod
+                        });
+                    }
                 }
             }
 
-            io.sockets.in(sckId).emit('previousMessage', dados);
+            // io.sockets.in(sckId).emit('previousMessage', dados);
         });
     });
 }
