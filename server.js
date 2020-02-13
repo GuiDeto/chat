@@ -109,8 +109,8 @@ function showOldMessagesChat(r, sckId) {
             room: r
         }).limit(1).toArray(function (err, docs) {
             if (err) throw err;
-            var roomData = docs[0].posts;
-            if(roomData.length){
+            var roomData = docs[0];
+            if(roomData.posts!=undefined && roomData.posts.length > 0){
                 for (const roomMsg of roomData.posts) {
                     var i = searchJSON(roomData.users, roomMsg.user);
                     if (i > -1) {
@@ -124,8 +124,7 @@ function showOldMessagesChat(r, sckId) {
                     }
                 }
             }
-
-            // io.sockets.in(sckId).emit('previousMessage', dados);
+            io.sockets.in(sckId).emit('previousMessage', dados);
         });
     });
 }
