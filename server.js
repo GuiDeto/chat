@@ -111,7 +111,7 @@ function showOldMessagesChat(r, sckId) {
             if (err) throw err;
             var roomData = docs[0];
 
-            for (roomMsg of roomData.posts) {
+            for (const roomMsg of roomData.posts) {
                 var i = searchJSON(roomData.users, roomMsg.user);
                 if (i > -1) {
                     dados.push({
