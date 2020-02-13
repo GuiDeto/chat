@@ -21,20 +21,29 @@ app.use('/', (req, res) => {
 
 io.sockets.on('connection', function (socket) {
     socket.on('create', function (data) {
-        socket.join(data.room, function () {
-            console.log(`Conexão estabelecida id: ${socket.id} Sala: ${data.room} Usuario: ${data.user}`);
-            showOldMessagesChat(data.room, socket.id);
-            const showUserRoom = async function(r){
-                const usersRoom = await getUsrsRoom(r);
-                io.in(data.room).emit('loadUsersRoom', usersRoom);
+
+        const showInfoRoom = async function(r){
+            const infoRoom = await getInfoRoom(r);
+            const chkUsrRoom = searchJSON(infoRoom.users, data.user);
+
+            if(chkUsrRoom != undefined){
+                socket.join(data.room, function () {
+                    console.log(`Conexão estabelecida id: ${socket.id} Sala: ${data.room} Usuario: ${data.user}`);
+                    showOldMessagesChat(data.room, socket.id, data.user);
+                    const showUserRoom = async function(r){
+                        const usersRoom = await getUsrsRoom(r);
+                        io.in(data.room).emit('loadUsersRoom', usersRoom);
+                    }
+                    const getUserImg = async function(u){
+                        const showUserData = await getUsrInfo(u);
+                        io.to(socket.id).emit('loadMyPicture', {img:showUserData.img});
+                    }
+                    showUserRoom(data.room);
+                    getUserImg(data.user);
+                });
             }
-            const getUserImg = async function(u){
-                const showUserData = await getUsrInfo(u);
-                io.to(socket.id).emit('loadMyPicture', {img:showUserData.img});
-            }
-            showUserRoom(data.room);
-            getUserImg(data.user);
-        });
+        }
+        showInfoRoom(data.room);
     });
 
     socket.on('sendMessage', data => {
@@ -88,11 +97,29 @@ const getUsrsRoom = function(room){
     })
 }
 
+const getInfoRoom = function(room){
+    return new Promise(function(resolve, reject) {
+        mongo.connect(process.env.MONGO_URL, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true
+        }, (err, client) => {
+            if (err) {
+                console.error(err)
+                return
+            }
+            let db = client.db('chat_sisc').collection('posts');
+            db.find( {room:room} ).limit(1).toArray(function (err, docs) {
+                resolve(docs[0]);
+            });
+         })
+    })
+}
+
 const loadApp = server.listen(process.env.PORT || 3000, () => {
     console.log('Server on port: ' + loadApp.address().port);
 });
 
-function showOldMessagesChat(r, sckId) {
+function showOldMessagesChat(r, sckId, usr) {
     mongo.connect(process.env.MONGO_URL, {
         useNewUrlParser: true,
         useUnifiedTopology: true
@@ -110,7 +137,8 @@ function showOldMessagesChat(r, sckId) {
         }).limit(1).toArray(function (err, docs) {
             if (err) throw err;
             var roomData = docs[0];
-            if(roomData.posts!=undefined && roomData.posts.length > 0){
+            var chkUserRoom = searchJSON(roomData.users, usr);
+            if(roomData.posts!=undefined && roomData.posts.length > 0 && chkUserRoom != undefined){
                 for (const roomMsg of roomData.posts) {
                     var i = searchJSON(roomData.users, roomMsg.user);
                     if (i > -1) {
@@ -123,8 +151,8 @@ function showOldMessagesChat(r, sckId) {
                         });
                     }
                 }
+                io.sockets.in(sckId).emit('previousMessage', dados);
             }
-            io.sockets.in(sckId).emit('previousMessage', dados);
         });
     });
 }
