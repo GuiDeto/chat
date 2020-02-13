@@ -177,10 +177,12 @@ async function insertMessageDB(r, u, m) {
 
         let db = client.db('chat_sisc').collection('posts');
 
-        const getUsrData = async function(c){
+        const getUsrData = async function(r, u, m){
             var infoUsr = await getUsrInfo(u);
+
             var userChat = infoUsr.name;
             var d = new Date().toISOString();
+            
             db.updateOne({
                 room: r
             },{
@@ -196,7 +198,7 @@ async function insertMessageDB(r, u, m) {
             });
             io.in(r).emit('sendMessage', {user: userChat, message: m, cod: u, img: infoUsr.img});
         }
-        getUsrData();
+        getUsrData(r, u, m);
     })
 }
 
