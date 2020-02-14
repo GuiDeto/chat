@@ -19,8 +19,8 @@ Dropzone.options.dropchatfiles = {
     acceptedFiles: '.jpg,.jpeg,.pdf,.doc,.docx,.xls,.xlsx',
     init: function () {
         this.on('success', function (file) {
-            document.querySelectorAll('#upload-modal')[0].style.display = 'none';
-            document.querySelector('.modal-backdrop').style = 'display:none';
+            document.querySelectorAll('#upload-modal')[0].classList.value = 'modal fade';
+            document.querySelector('.modal-backdrop').classList.value = 'modal-backdrop fade'
         });
     }
 
