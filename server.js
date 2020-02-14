@@ -23,24 +23,29 @@ io.sockets.on('connection', function (socket) {
     socket.on('create', function (data) {
 
         const showInfoRoom = async function(r){
-            const infoRoom = await getInfoRoom(r);
-            const chkUsrRoom = searchJSON(infoRoom.users, data.user);
-
-            if(chkUsrRoom != undefined){
-                socket.join(data.room, function () {
-                    console.log(`Conexão estabelecida id: ${socket.id} Sala: ${data.room} Usuario: ${data.user}`);
-                    showOldMessagesChat(data.room, socket.id, data.user);
-                    const showUserRoom = async function(r){
-                        const usersRoom = await getUsrsRoom(r);
-                        io.in(data.room).emit('loadUsersRoom', usersRoom);
+                const infoRoom = await getInfoRoom(r);
+                if(infoRoom!=undefined){
+                    const chkUsrRoom = searchJSON(infoRoom.users, data.user);
+                    if(chkUsrRoom != undefined){
+                        socket.join(data.room, function () {
+                            console.log(`Conexão estabelecida id: ${socket.id} Sala: ${data.room} Usuario: ${data.user}`);
+                            showOldMessagesChat(data.room, socket.id, data.user);
+                            const showUserRoom = async function(r){
+                                const usersRoom = await getUsrsRoom(r);
+                                io.in(data.room).emit('loadUsersRoom', usersRoom);
+                            }
+                            const getUserImg = async function(u){
+                                const showUserData = await getUsrInfo(u);
+                                io.to(socket.id).emit('loadMyPicture', {img:showUserData.img});
+                            }
+                            showUserRoom(data.room);
+                            getUserImg(data.user);
+                        });
+                    }else{
+                        io.to(socket.id).emit('erro', {erro:"Você não está cadastrado nessa sala!"});
                     }
-                    const getUserImg = async function(u){
-                        const showUserData = await getUsrInfo(u);
-                        io.to(socket.id).emit('loadMyPicture', {img:showUserData.img});
-                    }
-                    showUserRoom(data.room);
-                    getUserImg(data.user);
-                });
+            }else{
+                io.to(socket.id).emit('erro', {erro:"Caminho incorreto!<br>Verifique o endereço corretamente!"});
             }
         }
         showInfoRoom(data.room);
@@ -151,19 +156,10 @@ function showOldMessagesChat(r, sckId, usr) {
                         });
                     }
                 }
-                io.sockets.in(sckId).emit('previousMessage', dados);
+                io.to(sckId).emit('previousMessage', dados);
             }
         });
     });
-}
-
-function searchJSON(arr, s) {
-    var i, key;
-
-    for (i = arr.length; i--;)
-        for (key in arr[i])
-            if (arr[i].hasOwnProperty(key) && arr[i][key].indexOf(s) > -1)
-                return i;
 }
 
 async function insertMessageDB(r, u, m) {
@@ -182,7 +178,7 @@ async function insertMessageDB(r, u, m) {
 
             var userChat = infoUsr.name;
             var d = new Date().toISOString();
-            
+
             db.updateOne({
                 room: r
             },{
@@ -196,7 +192,7 @@ async function insertMessageDB(r, u, m) {
             }, function (err, res) {
                 assert.equal(null, err);
             });
-            io.in(r).emit('sendMessage', {user: userChat, message: m, cod: u, img: infoUsr.img});
+            io.in(r).emit('sendMessage', {user: userChat, message: m, cod: u, img: infoUsr.img, date:d});
         }
         getUsrData(r, u, m);
     })
@@ -204,4 +200,14 @@ async function insertMessageDB(r, u, m) {
 
 function getIPInfo(ip) {
     var URL = 'https://ipapi.co/' + ip + '/json';
+}
+
+
+function searchJSON(arr, s) {
+    var i, key;
+
+    for (i = arr.length; i--;)
+        for (key in arr[i])
+            if (arr[i].hasOwnProperty(key) && arr[i][key].indexOf(s) > -1)
+                return i;
 }

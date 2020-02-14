@@ -178,9 +178,9 @@ html {
     margin-top: auto;
     margin-bottom: auto;
     margin-left: 10px;
-    border-radius: 25px;
-    background-color: #82ccdd;
-    padding: 10px;
+    border-radius: 5px;
+    background-color: #e4e4e4;
+    padding: 0 3px 0 3px;
     position: relative;
 }
 
@@ -188,24 +188,24 @@ html {
     margin-top: auto;
     margin-bottom: auto;
     margin-right: 10px;
-    border-radius: 25px;
-    background-color: #78e08f;
-    padding: 10px;
+    border-radius: 5px;
+    background-color: #b6ffaefa;
+    padding: 0 3px 0 3px;
     position: relative;
 }
 
 .msg_time {
     position: absolute;
-    left: 0;
-    bottom: -15px;
+    left: -50px;
+    bottom: -20px;
     color: rgba(255, 255, 255, 0.5);
-    font-size: 10px;
+    font-size: 8px;
 }
 
 .msg_time_send {
     position: absolute;
-    right: 0;
-    bottom: -15px;
+    right: -50px;
+    bottom: -20px;
     color: rgba(255, 255, 255, 0.5);
     font-size: 10px;
 }

@@ -1,35 +1,16 @@
 
-function timeSince(date) {
-
-    var seconds = Math.floor((new Date() - new Date(date)) / 1000);
-  
-    var interval = Math.floor(seconds / 31536000);
-  
-    if (interval > 1) {
-      return interval + " anos";
-    }
-    interval = Math.floor(seconds / 2592000);
-    if (interval > 1) {
-      return interval + " meses";
-    }
-    interval = Math.floor(seconds / 86400);
-    if (interval > 1) {
-      return interval + " dias";
-    }
-    interval = Math.floor(seconds / 3600);
-    if (interval > 1) {
-      return interval + " horas";
-    }
-    interval = Math.floor(seconds / 60);
-    if (interval > 1) {
-      return interval + " minutos";
-    }
-    if(interval = NaN){
-      return "agora";
-    }
-    return Math.floor(seconds) + " segundos";
-  }
-
+function timeSince(date){
+    var data = new Date(date),
+        hora = data.getHours().toString(),
+        min = data.getMinutes().toString(),
+        seg = data.getSeconds().toString(),
+        dia  = data.getDate().toString(),
+        diaF = (dia.length == 1) ? '0'+dia : dia,
+        mes  = (data.getMonth()+1).toString(),
+        mesF = (mes.length == 1) ? '0'+mes : mes,
+        anoF = data.getFullYear();
+    return `${hora}:${min}:${seg} ${diaF}.${mesF}.${anoF}`;
+}
 
 function getQueryParams(qs) {
     qs = qs.split("+").join(" ");
@@ -63,10 +44,15 @@ function renderMessage(message) {
 function loadUsers(users){
   var userRoom = '';
   for (const user of users) {
-    userRoom += '<li class="active"><div class="d-flex bd-highlight"><div class="img_cont"><img src="'+user.img+'" class="rounded-circle user_img"><span class="online_icon"></span></div><div class="user_info"><span>'+user.name+'</span><p>'+user.cargo+'</p></div></div></li>';
+    userRoom += '<li class="active"><div class="d-flex bd-highlight"><div class="img_cont"><img src="'+user.img+'" class="rounded-circle user_img"><span class="online_icon offline"></span></div><div class="user_info"><span>'+user.name+'</span><p>'+user.cargo+'</p></div></div></li>';
   }
   $('#usersRoom').html(userRoom);
   // online_icon offline
+  // online_icon
+}
+
+function showErro(m){
+    toastr.error(m.erro, 'Chat SISC',{"timeOut":0});
 }
 
 function loadMyPicture(i){
@@ -75,6 +61,10 @@ function loadMyPicture(i){
 
 socket.on("sendMessage", function (message) {
     renderMessage(message);
+});
+
+socket.on("erro", function (message) {
+    showErro(message);
 });
 
 socket.on("loadMyPicture", function (i) {
