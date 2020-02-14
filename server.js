@@ -202,6 +202,7 @@ async function insertMessageDB(r, u, m) {
         getUsrData(r, u, m);
     })
 }
+
 function getIPInfo(ip) {
     var URL = 'https://ipapi.co/' + ip + '/json';
 }
