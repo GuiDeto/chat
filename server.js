@@ -8,6 +8,7 @@ const mongo = require('mongodb').MongoClient;
 const app = express();
 const server = require('http').createServer(app);
 const io = require('socket.io')(server);
+const usrsOnline = {};
 
 app.set('views', path.join(__dirname, 'public'));
 app.engine('html', require('ejs').renderFile);
@@ -30,6 +31,7 @@ io.sockets.on('connection', function (socket) {
                         socket.join(data.room, function () {
                             console.log(`Conexão estabelecida id: ${socket.id} Sala: ${data.room} Usuario: ${data.user}`);
                             showOldMessagesChat(data.room, socket.id, data.user);
+                            usrsOnline[socket.id] = data.user;
                             const showUserRoom = async function(r){
                                 const usersRoom = await getUsrsRoom(r);
                                 io.in(data.room).emit('loadUsersRoom', usersRoom);
@@ -54,6 +56,9 @@ io.sockets.on('connection', function (socket) {
     socket.on('sendMessage', data => {
         sendMessageUsr(data);
     });
+    socket.on('disconnect', function(){
+        delete usrsOnline[socket.id];
+      });
 
 });
 
@@ -82,7 +87,6 @@ const getUsrInfo = function(cod){
          })
     })
 }
-
 const getUsrsRoom = function(room){
     return new Promise(function(resolve, reject) {
         mongo.connect(process.env.MONGO_URL, {
@@ -95,13 +99,17 @@ const getUsrsRoom = function(room){
             }
             let db = client.db('chat_sisc').collection('posts');
             db.find( {room:room} ).project({users:1}).limit(1).toArray(function (err, docs) {
-                var salas = docs[0].users;
-                resolve(salas);
+                var usrRoom = [];
+                var userSign = docs[0].users;
+                for (const usr of userSign) {
+                    var stsUsr = findArr(usrsOnline, usr.cod)<0?false:true;
+                    usrRoom.push({name:usr.name, cod:usr.cod,img:usr.img,cargo:usr.cargo,status:stsUsr})
+                }
+                resolve(usrRoom);
             });
          })
     })
 }
-
 const getInfoRoom = function(room){
     return new Promise(function(resolve, reject) {
         mongo.connect(process.env.MONGO_URL, {
@@ -119,11 +127,9 @@ const getInfoRoom = function(room){
          })
     })
 }
-
 const loadApp = server.listen(process.env.PORT || 3000, () => {
     console.log('Server on port: ' + loadApp.address().port);
 });
-
 function showOldMessagesChat(r, sckId, usr) {
     mongo.connect(process.env.MONGO_URL, {
         useNewUrlParser: true,
@@ -161,7 +167,6 @@ function showOldMessagesChat(r, sckId, usr) {
         });
     });
 }
-
 async function insertMessageDB(r, u, m) {
     mongo.connect(process.env.MONGO_URL, {
         useNewUrlParser: true,
@@ -197,17 +202,17 @@ async function insertMessageDB(r, u, m) {
         getUsrData(r, u, m);
     })
 }
-
 function getIPInfo(ip) {
     var URL = 'https://ipapi.co/' + ip + '/json';
 }
-
-
 function searchJSON(arr, s) {
-    var i, key;
+    let i, key;
 
     for (i = arr.length; i--;)
         for (key in arr[i])
             if (arr[i].hasOwnProperty(key) && arr[i][key].indexOf(s) > -1)
                 return i;
+}
+function findArr(arr, s){
+    return Object.values(arr).indexOf(s);
 }

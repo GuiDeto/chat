@@ -21,7 +21,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.4.1/js/bootstrap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    <script src="/scripts/app.js"></script>
   </head>
 
   <body>
@@ -42,8 +41,8 @@
               <div class="d-flex bd-highlight">
                 <div class="img_cont" id='myPicture'></div>
                 <div class="user_info">
-                  <span>Chat</span>
-                  <p>1767 Messages</p>
+                  <span>Chat SISC</span>
+                  <p>Beta teste 0.0.3</p>
                 </div>
                 <div class="video_cam">
                   <span><i class="fas fa-video"></i></span>
@@ -52,7 +51,7 @@
               </div>
             </div>
 
-            <div class="card-body msg_card_body" id="historyMessage"></div>
+            <div class="card-body msg_card_body scrollbar" id="historyMessage"></div>
 
             <div class="card-footer">
               <div class="input-group">
@@ -61,12 +60,8 @@
                     ><i class="fas fa-paperclip"></i
                   ></span>
                 </div>
-                <textarea
-                  name="message"
-                  class="form-control type_msg"
-                  placeholder="Digite sua mensagem..."
-                ></textarea>
-                <div class="input-group-append" onclick="sendMessage()">
+                <textarea name="message" class="form-control type_msg" placeholder="Digite sua mensagem..." id="messageUsr" ></textarea>
+                <div class="input-group-append" id="btnSendMessage" onclick="sendMessage()">
                   <span class="input-group-text send_btn"
                     ><i class="fas fa-location-arrow"></i
                   ></span>
@@ -77,5 +72,6 @@
         </div>
       </div>
     </div>
+    <script src="/scripts/app.js"></script>
   </body>
 </html>
