@@ -60,7 +60,7 @@ window.onload = function () {
             user: user
         });
     }
-    messageUsr.addEventListener("keydown", function (event) {
+    messageUsr.addEventListener("keyup", function (event) {
         if(event.keyCode == 13 && event.shiftKey==false){
             sendMessage();
         }
