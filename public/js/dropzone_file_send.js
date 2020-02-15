@@ -23,5 +23,4 @@ Dropzone.options.dropchatfiles = {
             document.querySelector('.modal-backdrop').classList.value = 'modal-backdrop fade'
         });
     }
-
-};
+}

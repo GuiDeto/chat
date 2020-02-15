@@ -8,6 +8,7 @@ const app = express();
 const server = require('http').createServer(app);
 const io = require('socket.io')(server);
 const usrsOnline = {};
+const CryptoJS = require('crypto-js');
 
 app.set('views', path.join(__dirname, 'public'));
 app.engine('html', require('ejs').renderFile);
@@ -22,32 +23,33 @@ var fs = Promise.promisifyAll(require('fs'));
 var sanitize = require("sanitize-filename");
 
 function process_upload(req, res) {
-  if(req.files) {
-    var upload_dir=path.join(__dirname,'public/upload_files');
-    var room = getUrlVars(req.headers.referer).b;
-    var cdgUsr = getUrlVars(req.headers.referer).u;
-    const sanitized_filename = [];
+    if (req.files) {
+        var upload_dir = path.join(__dirname, 'public/upload_files');
+        var room = getUrlVars(req.headers.referer).b;
+        var cdgUsr = getUrlVars(req.headers.referer).u;
+        const sanitized_filename = [];
 
-    Promise.resolve(req.files)
-      .each(function(file_incoming, idx) {
-          sanitized_filename.push( sanitize(file_incoming.originalname) );
-          const file_to_save = path.join( upload_dir, sanitized_filename[0] );
-
-          return fs
-            .writeFileAsync(file_to_save, file_incoming.buffer)
-      })
-      .then( _ => {
-        sendMessageUsr({cod:cdgUsr, room:room, message: encodeURIComponent(`<a href='/download/${sanitized_filename[0]}' target='_blank'>clique para baixar</a>`) });
-        return res.sendStatus(200);
-      });
-
-  }
+        Promise.resolve(req.files)
+            .each(function (file_incoming, idx) {
+                sanitized_filename.push(sanitize(file_incoming.originalname));
+                const file_to_save = path.join(upload_dir, sanitized_filename[0]);
+                return fs
+                    .writeFileAsync(file_to_save, file_incoming.buffer)
+            })
+            .then(_ => {
+                sendMessageUsr({
+                    cod: cdgUsr,
+                    room: room,
+                    message: encodeURIComponent(`<a href='/download/${sanitized_filename[0]}' target='_blank'>baixar o arquivo</a>`)
+                });
+                return res.sendStatus(200);
+            });
+    }
 }
 
 app.use('/', (req, res) => {
     res.render('index.html');
 });
-
 
 io.sockets.on('connection', function (socket) {
     socket.on('create', function (data) {
@@ -87,18 +89,15 @@ io.sockets.on('connection', function (socket) {
         }
         showInfoRoom(data.room);
     });
-
     socket.on('sendMessage', data => {
         sendMessageUsr(data);
     });
     socket.on('disconnect', function () {
         delete usrsOnline[socket.id];
     });
-
 });
 
-const sendMessageUsr = async function (arr) {
-    var infoUsr = await getUsrInfo(arr.cod);
+function sendMessageUsr(arr) {
     emitMessage = {
         cod: arr.cod,
         room: arr.room,
@@ -106,7 +105,6 @@ const sendMessageUsr = async function (arr) {
     };
     insertMessageDB(arr.room, arr.cod, arr.message);
 }
-
 const getUsrInfo = function (cod) {
     return new Promise(function (resolve, reject) {
         mongo.connect(process.env.MONGO_URL, {
@@ -186,6 +184,7 @@ const getInfoRoom = function (room) {
         })
     })
 }
+
 const loadApp = server.listen(process.env.PORT || 3000, () => {
     console.log('Server on port: ' + loadApp.address().port);
 });
@@ -195,39 +194,43 @@ function showOldMessagesChat(r, sckId, usr) {
         useNewUrlParser: true,
         useUnifiedTopology: true
     }, (err, client) => {
-        if (err) {
-            console.error(err)
-            return
-        }
+        if (err) throw err;
 
         let db = client.db('chat_sisc').collection('posts');
-        var dados = [];
-
         db.find({
             room: r
         }).limit(1).toArray(function (err, docs) {
             if (err) throw err;
             var roomData = docs[0];
-            var chkUserRoom = searchJSON(roomData.users, usr);
-            if (roomData.posts != undefined && roomData.posts.length > 0 && chkUserRoom != undefined) {
-                for (const roomMsg of roomData.posts) {
-                    var i = searchJSON(roomData.users, roomMsg.user);
-                    if (i > -1) {
-                        dados.push({
-                            "user": roomData.users[i].name,
-                            "message": roomMsg.message,
-                            "date": roomMsg.date_add,
-                            "img": roomData.users[i].img,
-                            "cod": roomData.users[i].cod
-                        });
-                    }
-                }
-                io.to(sckId).emit('previousMessage', dados);
+
+            if ( roomData.posts.length > 0 ) {
+                sendPreviousMessages(roomData, sckId, usr);
             }
         });
     });
 }
-async function insertMessageDB(r, u, m) {
+
+function sendPreviousMessages(messages, sckId, usr) {
+    var dados = [];
+    var i = searchJSON(messages.users, usr);
+    if ( i > -1) {
+    for (const roomMsg of messages.posts) {
+        var msg =   CryptoJS.AES.decrypt(roomMsg.message, process.env.CRYPT_KEY);
+        var dcMsg = msg.toString(CryptoJS.enc.Utf8);
+
+            dados.push({
+                "user": messages.users[i].name,
+                "message": encodeURIComponent( dcMsg ),
+                "date": roomMsg.date_add,
+                "img": messages.users[i].img,
+                "cod": messages.users[i].cod
+            });
+        }
+    }
+    io.to(sckId).emit('previousMessage', dados);
+}
+
+function insertMessageDB(r, u, m) {
     mongo.connect(process.env.MONGO_URL, {
         useNewUrlParser: true,
         useUnifiedTopology: true
@@ -243,14 +246,13 @@ async function insertMessageDB(r, u, m) {
 
             var userChat = infoUsr.name;
             var d = new Date().toISOString();
-
             db.updateOne({
                 room: r
             }, {
                 $push: {
                     posts: {
                         user: userChat,
-                        message: m,
+                        message: CryptoJS.AES.encrypt(decodeURIComponent(m), process.env.CRYPT_KEY).toString(),
                         date_add: d
                     }
                 }
@@ -288,7 +290,7 @@ function findArr(arr, s) {
 
 function getUrlVars(url) {
     var vars = {};
-    var parts = url.replace(/[?&]+([^=&]+)=([^&]*)/gi, function(m,key,value) {
+    var parts = url.replace(/[?&]+([^=&]+)=([^&]*)/gi, function (m, key, value) {
         vars[key] = value;
     });
     return vars;

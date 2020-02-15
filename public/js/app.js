@@ -68,7 +68,7 @@ window.onload = function () {
 }
 
 function renderMessage(message) {
-    var msg = decodeURIComponent(message.message.replace(/%0/ig,'<br />'));
+    var msg = decodeURIComponent(message.message.replace(/%0A/ig,'<br />'));
     var data = timeSince(message.date);
 
     var texto_people = '<div class="d-flex justify-content-start mb-4"><div class="img_cont_msg"><img src="' + message.img + '" class="rounded-circle user_img_msg"></div><div class="msg_cotainer">' + msg + '<span class="msg_time">' + data + '</span></div></div>';
