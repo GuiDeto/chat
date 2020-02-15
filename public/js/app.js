@@ -1,16 +1,18 @@
 function timeSince(date) {
     var data = new Date(date),
         hora = data.getHours().toString(),
+        horaF = hora.length==1?'0'+hora:hora,
         min = data.getMinutes().toString(),
+        minF = min.length==1?'0'+min:min,
         seg = data.getSeconds().toString(),
+        segF = seg.length==1?'0'+seg:seg,
         dia = data.getDate().toString(),
         diaF = (dia.length == 1) ? '0' + dia : dia,
         mes = (data.getMonth() + 1).toString(),
         mesF = (mes.length == 1) ? '0' + mes : mes,
         anoF = data.getFullYear();
-    return `${hora}:${min}:${seg} ${diaF}.${mesF}.${anoF}`;
+    return `${horaF}:${minF}:${segF} ${diaF}.${mesF}.${anoF}`;
 }
-
 function getQueryParams(qs) {
     qs = qs.split("+").join(" ");
 
@@ -52,13 +54,14 @@ window.onload = function () {
         }
     });
 
-    socket.emit('login',{ user:user });
-
-    if (room != undefined && room.match("sala[1-9]") != null) {
+    if ((typeof(user)=='string' && 1 < user.length) && room.match("sala[1-9]") != null) {
         socket.emit("create", {
             room: room,
             user: user
         });
+        socket.emit('login',{ user:user });
+    }else{
+        this.showErro({erro:'Informações incorretas!'});
     }
     messageUsr.addEventListener("keyup", function (event) {
         if(event.keyCode == 13 && event.shiftKey==false){
@@ -88,17 +91,19 @@ function loadUsers(users) {
         var stsUsr = user.status?'online_icon':'online_icon offline';
         userRoom += '<li class="active"><div class="d-flex bd-highlight"><div class="img_cont"><img src="' + user.img + '" class="rounded-circle user_img"><span class="'+stsUsr+'"></span></div><div class="user_info"><span>' + user.name + '</span><p>' + user.cargo + '</p></div></div></li>';
     }
-    $('#usersRoom').html(userRoom);
+    document.querySelector('#usersRoom').innerHTML = userRoom;
 }
 
 function showErro(m) {
-    toastr.error(m.erro, 'Chat SISC', {
-        "timeOut": 0
-    });
+    Swal.fire({
+        icon: 'error',
+        title: 'SISC CHAT',
+        text: m.erro,
+      })
 }
 
 function loadMyPicture(i) {
-    $('#myPicture').html('<img src="' + i + '" class="rounded-circle user_img" /><span class="online_icon"></span>');
+    document.querySelector('#myPicture').innerHTML = '<img src="' + i + '" class="rounded-circle user_img" /><span class="online_icon"></span>';
 }
 
 function sendMessage() {
@@ -114,4 +119,5 @@ function sendMessage() {
     }
     document.querySelectorAll("#messageUsr")[0].value = '';
 }
+
 

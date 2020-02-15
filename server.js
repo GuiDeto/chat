@@ -13,6 +13,7 @@ const CryptoJS = require('crypto-js');
 app.set('views', path.join(__dirname, 'public'));
 app.engine('html', require('ejs').renderFile);
 
+app.use('/plgs', express.static(path.join(__dirname, 'node_modules')));
 app.use('/scripts', express.static(path.join(__dirname, 'public/js')));
 app.use('/styles', express.static(path.join(__dirname, 'public/css')));
 app.use('/download', express.static(path.join(__dirname, 'public/upload_files')));
@@ -53,41 +54,41 @@ app.use('/', (req, res) => {
 
 io.sockets.on('connection', function (socket) {
     socket.on('create', function (data) {
-
-        const showInfoRoom = async function (r) {
-            const infoRoom = await getInfoRoom(r);
-            if (infoRoom != undefined) {
-                const chkUsrRoom = searchJSON(infoRoom.users, data.user);
-                if (chkUsrRoom != undefined) {
-                    socket.join(data.room, function () {
-                        console.log(`Conexão estabelecida id: ${socket.id} Sala: ${data.room} Usuario: ${data.user}`);
-                        showOldMessagesChat(data.room, socket.id, data.user);
-                        usrsOnline[socket.id] = data.user;
-                        const showUserRoom = async function (r) {
-                            const usersRoom = await getUsrsRoom(r);
-                            io.in(data.room).emit('loadUsersRoom', usersRoom);
-                        }
-                        const getUserImg = async function (u) {
-                            const showUserData = await getUsrInfo(u);
-                            io.to(socket.id).emit('loadMyPicture', {
-                                img: showUserData.img
-                            });
-                        }
-                        showUserRoom(data.room);
-                        getUserImg(data.user);
-                    });
+        if((typeof(data.room)=='string' && 1 < data.room.length) && (typeof(data.user)=='string' && 1 <  data.user.length)){
+            const showInfoRoom = async function (r) {
+                const infoRoom = await getInfoRoom(r);
+                console.log(infoRoom);
+                if (infoRoom != undefined) {
+                    const chkUsrRoom = searchJSON(infoRoom.users, data.user);
+                    if (chkUsrRoom != undefined) {
+                        socket.join(data.room, function () {
+                            console.log(`Conexão estabelecida id: ${socket.id} Sala: ${data.room} Usuario: ${data.user}`);
+                            showOldMessagesChat(data.room, socket.id, data.user);
+                            usrsOnline[socket.id] = data.user;
+                            const showUserRoom = async function (r) {
+                                const usersRoom = await getUsrsRoom(r);
+                                io.in(data.room).emit('loadUsersRoom', usersRoom);
+                            }
+                            const getUserImg = async function (u) {
+                                const showUserData = await getUsrInfo(u);
+                                io.to(socket.id).emit('loadMyPicture', {
+                                    img: showUserData.img
+                                });
+                            }
+                            showUserRoom(data.room);
+                            getUserImg(data.user);
+                        });
+                    } else {
+                        showErro({msg:'Você não está cadastrado nessa sala!', id:socket.id});
+                    }
                 } else {
-                    io.to(socket.id).emit('erro', {
-                        erro: "Você não está cadastrado nessa sala!"
-                    });
+                    showErro({msg:'Caminho incorreto!<br>Verifique o endereço corretamente!', id:socket.id});
                 }
-            } else {
-                io.to(socket.id).emit('erro', {
-                    erro: "Caminho incorreto!<br>Verifique o endereço corretamente!"
-                });
             }
+            showInfoRoom(data.room);
+        }else{
+            showErro({msg:'Dados incorretos para montar a sala!', id:socket.id});
         }
-        showInfoRoom(data.room);
     });
     socket.on('sendMessage', data => {
         sendMessageUsr(data);
@@ -97,6 +98,11 @@ io.sockets.on('connection', function (socket) {
     });
 });
 
+function showErro(erros){
+    io.to(erros.id).emit('erro', {
+        erro: erros.msg
+    });
+}
 function sendMessageUsr(arr) {
     emitMessage = {
         cod: arr.cod,
@@ -111,10 +117,7 @@ const getUsrInfo = function (cod) {
             useNewUrlParser: true,
             useUnifiedTopology: true
         }, (err, client) => {
-            if (err) {
-                console.error(err)
-                return
-            }
+            assert.equal(null, err);
             let db = client.db('chat_sisc').collection('posts');
             db.find({
                 users: {
@@ -138,10 +141,7 @@ const getUsrsRoom = function (room) {
             useNewUrlParser: true,
             useUnifiedTopology: true
         }, (err, client) => {
-            if (err) {
-                console.error(err)
-                return
-            }
+            assert.equal(null, err);
             let db = client.db('chat_sisc').collection('posts');
             db.find({
                 room: room
@@ -171,10 +171,7 @@ const getInfoRoom = function (room) {
             useNewUrlParser: true,
             useUnifiedTopology: true
         }, (err, client) => {
-            if (err) {
-                console.error(err)
-                return
-            }
+            assert.equal(null, err);
             let db = client.db('chat_sisc').collection('posts');
             db.find({
                 room: room
@@ -189,12 +186,12 @@ const loadApp = server.listen(process.env.PORT || 3000, () => {
     console.log('Server on port: ' + loadApp.address().port);
 });
 
-function showOldMessagesChat(r, sckId, usr) {
+function showOldMessagesChat(r, sckId, usr){
     mongo.connect(process.env.MONGO_URL, {
         useNewUrlParser: true,
         useUnifiedTopology: true
-    }, (err, client) => {
-        if (err) throw err;
+    }, function(err, client){
+        assert.equal(null, err);
 
         let db = client.db('chat_sisc').collection('posts');
         db.find({
@@ -215,12 +212,10 @@ function sendPreviousMessages(messages, sckId, usr) {
     var i = searchJSON(messages.users, usr);
     if ( i > -1) {
     for (const roomMsg of messages.posts) {
-        var msg =   CryptoJS.AES.decrypt(roomMsg.message, process.env.CRYPT_KEY);
-        var dcMsg = msg.toString(CryptoJS.enc.Utf8);
-
+        var msg =   CryptoJS.AES.decrypt(roomMsg.message, process.env.CRYPT_KEY).toString(CryptoJS.enc.Utf8);
             dados.push({
                 "user": messages.users[i].name,
-                "message": encodeURIComponent( dcMsg ),
+                "message": encodeURIComponent( msg ),
                 "date": roomMsg.date_add,
                 "img": messages.users[i].img,
                 "cod": messages.users[i].cod
@@ -235,9 +230,7 @@ function insertMessageDB(r, u, m) {
         useNewUrlParser: true,
         useUnifiedTopology: true
     }, (err, client) => {
-        if (err) {
-            console.error(err)
-        }
+        assert.equal(null, err);
 
         let db = client.db('chat_sisc').collection('posts');
 
@@ -268,6 +261,7 @@ function insertMessageDB(r, u, m) {
             });
         }
         getUsrData(r, u, m);
+
     })
 }
 
