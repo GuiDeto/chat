@@ -9,15 +9,86 @@ const server = require('http').createServer(app);
 const io = require('socket.io')(server);
 const usrsOnline = {};
 const CryptoJS = require('crypto-js');
+const bodyParser = require('body-parser');
+const fetch = require('node-fetch');
+
+app.use(bodyParser.json());
 
 app.set('views', path.join(__dirname, 'public'));
 app.engine('html', require('ejs').renderFile);
+app.use(bodyParser.urlencoded({
+    extended: false
+}));
 
 app.use('/plgs', express.static(path.join(__dirname, 'node_modules')));
 app.use('/scripts', express.static(path.join(__dirname, 'public/js')));
 app.use('/styles', express.static(path.join(__dirname, 'public/css')));
 app.use('/download', express.static(path.join(__dirname, 'public/upload_files')));
 app.post('/file-upload', upload_files.array('source_file[]'), process_upload);
+
+app.route('/api/:id/:cod')
+    .post(async function (req, res) {
+        if (req.params.cod === process.env.API_CHAT_KEY) {
+            try {
+                const resp = await createRoom(req.body);
+                if (resp.ok) {
+                    res.status(202).send({
+                        success: 'true',
+                        message: 'successfuly',
+                        id: req.params.id,
+                        cod: req.params.cod,
+                        status: resp
+                    });
+                } else {
+                    res.status(500).send({
+                        message: "Houve algum problema ao criar sala!",
+                        status: resp
+                    });
+                }
+            } catch (error) {
+                assert.equal(null, error);
+            }
+        } else {
+            res.send(req).status('404');
+        }
+    });
+
+app.route('/api/:room/:cod').put(async function (req, res) {
+    if (req.params.cod === process.env.API_CHAT_KEY) {
+        try {
+            const resp = await addUsersRoom(req.body);
+            if (resp.ok) {
+                res.status(202).send({
+                    success: 'true',
+                    message: 'successfuly',
+                    sala: req.params.room,
+                    status: resp
+                });
+            } else {
+                res.status(500).send({
+                    message: "Houve algum problema ao adicionar usuario na sala!",
+                    status: resp
+                });
+            }
+        } catch (error) {
+            assert.equal(null, error);
+        }
+    } else {
+        res.send(req).status('404');
+    }
+});
+
+app.get('/:b/:u', (req, res) => {
+    var gravalog = async function(data){
+        var newLog = await insertInfoUsrDb(data);
+    }
+    gravalog({cod:req.params.u, room:req.params.b, ip:req.connection.remoteAddress, tipo:'logou'});
+
+    req.params = Object.assign(req.params, {
+        ip: req.connection.remoteAddress
+    });
+    res.render('index.html', req.params);
+});
 
 var Promise = require('bluebird');
 var fs = Promise.promisifyAll(require('fs'));
@@ -26,8 +97,8 @@ var sanitize = require("sanitize-filename");
 function process_upload(req, res) {
     if (req.files) {
         var upload_dir = path.join(__dirname, 'public/upload_files');
-        var room = getUrlVars(req.headers.referer).b;
-        var cdgUsr = getUrlVars(req.headers.referer).u;
+        var room = req.headers.referer.split('/')[3];
+        var cdgUsr = req.headers.referer.split('/')[4];
         const sanitized_filename = [];
 
         Promise.resolve(req.files)
@@ -37,27 +108,23 @@ function process_upload(req, res) {
                 return fs
                     .writeFileAsync(file_to_save, file_incoming.buffer)
             })
-            .then(_ => {
-                sendMessageUsr({
+            .then(function (e) {
+                insertMessageDB({
                     cod: cdgUsr,
                     room: room,
-                    message: encodeURIComponent(`<a href='/download/${sanitized_filename[0]}' target='_blank'>baixar o arquivo</a>`)
+                    message: encodeURIComponent(`<a href='/download/${sanitized_filename[0]}' target='_blank'>baixar o arquivo</a>`),
+                    ip: req.connection.remoteAddress
                 });
                 return res.sendStatus(200);
             });
     }
 }
 
-app.use('/', (req, res) => {
-    res.render('index.html');
-});
-
 io.sockets.on('connection', function (socket) {
     socket.on('create', function (data) {
-        if((typeof(data.room)=='string' && 1 < data.room.length) && (typeof(data.user)=='string' && 1 <  data.user.length)){
+        if ((typeof (data.room) == 'string' && 1 < data.room.length) && (typeof (data.user) == 'string' && 1 < data.user.length)) {
             const showInfoRoom = async function (r) {
                 const infoRoom = await getInfoRoom(r);
-                console.log(infoRoom);
                 if (infoRoom != undefined) {
                     const chkUsrRoom = searchJSON(infoRoom.users, data.user);
                     if (chkUsrRoom != undefined) {
@@ -79,37 +146,90 @@ io.sockets.on('connection', function (socket) {
                             getUserImg(data.user);
                         });
                     } else {
-                        showErro({msg:'Você não está cadastrado nessa sala!', id:socket.id});
+                        showErro({
+                            msg: 'Você não está cadastrado nessa sala!',
+                            id: socket.id
+                        });
                     }
                 } else {
-                    showErro({msg:'Caminho incorreto!<br>Verifique o endereço corretamente!', id:socket.id});
+                    showErro({
+                        msg: 'Caminho incorreto!<br>Verifique o endereço corretamente!',
+                        id: socket.id
+                    });
                 }
             }
             showInfoRoom(data.room);
-        }else{
-            showErro({msg:'Dados incorretos para montar a sala!', id:socket.id});
+        } else {
+            showErro({
+                msg: 'Dados incorretos para montar a sala!',
+                id: socket.id
+            });
         }
     });
     socket.on('sendMessage', data => {
-        sendMessageUsr(data);
+        insertMessageDB(data);
     });
     socket.on('disconnect', function () {
         delete usrsOnline[socket.id];
     });
 });
 
-function showErro(erros){
+function showErro(erros) {
     io.to(erros.id).emit('erro', {
         erro: erros.msg
     });
 }
-function sendMessageUsr(arr) {
-    emitMessage = {
-        cod: arr.cod,
-        room: arr.room,
-        message: arr.message
-    };
-    insertMessageDB(arr.room, arr.cod, arr.message);
+const createRoom = function (dados) {
+    return new Promise(function (resolve, reject) {
+        mongo.connect(process.env.MONGO_URL, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true
+        }, (err, client) => {
+            assert.equal(null, err);
+            let db = client.db('chat_sisc').collection('posts');
+            try {
+                db.insertOne({
+                    room: dados.room,
+                    id: dados.id,
+                    users: dados.users,
+                    posts: []
+                }).then(e => {
+                    resolve(e.result);
+                });
+            } catch (error) {
+                assert.equal(null, error);
+            }
+        })
+    })
+}
+const addUsersRoom = function (dados) {
+    return new Promise(function (resolve, reject) {
+        mongo.connect(process.env.MONGO_URL, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true
+        }, (err, client) => {
+            assert.equal(null, err);
+            let db = client.db('chat_sisc').collection('posts');
+            try {
+                db.updateOne({
+                    room: dados.room
+                }, {
+                    $push: {
+                        users: {
+                            name: dados.name,
+                            cod: dados.cod,
+                            img: dados.img,
+                            cargo: dados.cargo
+                        }
+                    }
+                }).then(e => {
+                    resolve(e.result);
+                });
+            } catch (error) {
+                assert.equal(null, error);
+            }
+        })
+    })
 }
 const getUsrInfo = function (cod) {
     return new Promise(function (resolve, reject) {
@@ -181,16 +301,15 @@ const getInfoRoom = function (room) {
         })
     })
 }
-
 const loadApp = server.listen(process.env.PORT || 3000, () => {
     console.log('Server on port: ' + loadApp.address().port);
 });
 
-function showOldMessagesChat(r, sckId, usr){
+function showOldMessagesChat(r, sckId, usr) {
     mongo.connect(process.env.MONGO_URL, {
         useNewUrlParser: true,
         useUnifiedTopology: true
-    }, function(err, client){
+    }, function (err, client) {
         assert.equal(null, err);
 
         let db = client.db('chat_sisc').collection('posts');
@@ -200,7 +319,7 @@ function showOldMessagesChat(r, sckId, usr){
             if (err) throw err;
             var roomData = docs[0];
 
-            if ( roomData.posts.length > 0 ) {
+            if (roomData.posts.length > 0) {
                 sendPreviousMessages(roomData, sckId, usr);
             }
         });
@@ -210,12 +329,12 @@ function showOldMessagesChat(r, sckId, usr){
 function sendPreviousMessages(messages, sckId, usr) {
     var dados = [];
     var i = searchJSON(messages.users, usr);
-    if ( i > -1) {
-    for (const roomMsg of messages.posts) {
-        var msg =   CryptoJS.AES.decrypt(roomMsg.message, process.env.CRYPT_KEY).toString(CryptoJS.enc.Utf8);
+    if (i > -1) {
+        for (const roomMsg of messages.posts) {
+            var msg = CryptoJS.AES.decrypt(roomMsg.message, process.env.CRYPT_KEY).toString(CryptoJS.enc.Utf8);
             dados.push({
                 "user": messages.users[i].name,
-                "message": encodeURIComponent( msg ),
+                "message": encodeURIComponent(msg),
                 "date": roomMsg.date_add,
                 "img": messages.users[i].img,
                 "cod": messages.users[i].cod
@@ -225,7 +344,7 @@ function sendPreviousMessages(messages, sckId, usr) {
     io.to(sckId).emit('previousMessage', dados);
 }
 
-function insertMessageDB(r, u, m) {
+function insertMessageDB(data) {
     mongo.connect(process.env.MONGO_URL, {
         useNewUrlParser: true,
         useUnifiedTopology: true
@@ -234,39 +353,90 @@ function insertMessageDB(r, u, m) {
 
         let db = client.db('chat_sisc').collection('posts');
 
-        const getUsrData = async function (r, u, m) {
-            var infoUsr = await getUsrInfo(u);
-
+        const getUsrData = async function (data) {
+            var infoUsr = await getUsrInfo(data.cod);
             var userChat = infoUsr.name;
             var d = new Date().toISOString();
             db.updateOne({
-                room: r
+                room: data.room
             }, {
                 $push: {
                     posts: {
                         user: userChat,
-                        message: CryptoJS.AES.encrypt(decodeURIComponent(m), process.env.CRYPT_KEY).toString(),
-                        date_add: d
+                        message: CryptoJS.AES.encrypt(decodeURIComponent(data.message), process.env.CRYPT_KEY).toString(),
+                        date_add: d,
+                        ip: data.ip
                     }
                 }
             }, function (err, res) {
                 assert.equal(null, err);
             });
-            io.in(r).emit('sendMessage', {
+            io.in(data.room).emit('sendMessage', {
                 user: userChat,
-                message: m,
-                cod: u,
+                message: data.message,
+                cod: data.cod,
                 img: infoUsr.img,
                 date: d
             });
         }
-        getUsrData(r, u, m);
-
+        getUsrData(data);
     })
 }
 
-function getIPInfo(ip) {
-    var URL = 'https://ipapi.co/' + ip + '/json';
+function insertInfoUsrDb(data) {
+    return new Promise(function(resolve, reject){
+        mongo.connect(process.env.MONGO_URL, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true
+        }, (err, client) => {
+            assert.equal(null, err);
+
+            let db = client.db('chat_sisc').collection('posts');
+
+            const insertLogUsr = async function (data) {
+                var d = new Date().toISOString();
+                // var infoIp = await getIPInfo(data.ip);
+                db.updateOne({
+                    room: data.room
+                }, {
+                    $push: {
+                        logs: {
+                            user: data.cod,
+                            date_add: d,
+                            ip: data.ip,
+                            tipo: data.tipo
+                        }
+                    }
+                }, function (err, res) {
+                    assert.equal(null, err);
+                });
+                resolve('update!');
+            }
+            insertLogUsr(data);
+        });
+    })
+
+}
+const getIPInfo = function(ip) {
+    new Promise(function (resolve, reject){
+        var apiUrl = 'https://ipapi.co/189.61.21.222/json';
+        // // var apiUrl = 'https://ipapi.co/'+ip+'/json';
+        // var result = fetch(apiUrl)
+        // .then(res => res.json())
+        // .then(json => resolve(json));
+
+        return fetch(apiUrl).then(response => {
+            console.log(response.json());
+            resolve(response.json())
+            // if (response.ok) {
+            //   resolve(response)
+            // } else {
+            //   reject(new Error('error'))
+            // }
+          }, error => {
+            reject(new Error(error.message))
+          })
+    });
 }
 
 function searchJSON(arr, s) {

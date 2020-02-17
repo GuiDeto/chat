@@ -13,22 +13,9 @@ function timeSince(date) {
         anoF = data.getFullYear();
     return `${horaF}:${minF}:${segF} ${diaF}.${mesF}.${anoF}`;
 }
-function getQueryParams(qs) {
-    qs = qs.split("+").join(" ");
 
-    var params = {},
-        tokens,
-        re = /[?&]?([^=]+)=([^&]*)/g;
-
-    while ((tokens = re.exec(qs))) {
-        params[decodeURIComponent(tokens[1])] = decodeURIComponent(tokens[2]);
-    }
-
-    return params;
-}
 const socket = io();
-const room = getQueryParams(document.location.search).b;
-const user = getQueryParams(document.location.search).u;
+
 const messageUsr = document.querySelectorAll(".type_msg")[0];
 window.onload = function () {
 
@@ -57,7 +44,8 @@ window.onload = function () {
     if ((typeof(user)=='string' && 1 < user.length) && room.match("sala[1-9]") != null) {
         socket.emit("create", {
             room: room,
-            user: user
+            user: user,
+            ip:ipUsr
         });
         socket.emit('login',{ user:user });
     }else{
@@ -68,6 +56,7 @@ window.onload = function () {
             sendMessage();
         }
     });
+
 }
 
 function renderMessage(message) {
@@ -113,7 +102,8 @@ function sendMessage() {
         var messageObject = {
             cod: user,
             message: msgUsr,
-            room: room
+            room: room,
+            ip: ipUsr
         };
         socket.emit("sendMessage", messageObject);
     }
