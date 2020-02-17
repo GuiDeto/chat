@@ -339,7 +339,7 @@ async function sendPreviousMessages(messages, sckId, usr) {
 let dados = [];
     for (const roomMsg of messages.posts) {
         var msg = CryptoJS.AES.decrypt(roomMsg.message, process.env.CRYPT_KEY).toString(CryptoJS.enc.Utf8);
-        const mstMsg = await montMsgsRoom( {cod: roomMsg.user, message:msg, date: roomMsg.date_add}, dados ) ;
+        const mstMsg = await montMsgsRoom( {cod: roomMsg.user, message:msg, date: roomMsg.date_add} ) ;
         dados.push(mstMsg);
     }
     io.to(sckId).emit('previousMessage', dados);
