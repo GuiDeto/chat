@@ -325,21 +325,22 @@ function showOldMessagesChat(r, sckId, usr) {
         });
     });
 }
+async function montMsgsRoom(data) {
+    var infoUsr = await getUsrInfo(data.cod);
+    return {
+        "message": encodeURIComponent(data.message),
+        "date": data.date,
+        "img": infoUsr.img,
+        "cod": data.cod
+    };
+}
 
-function sendPreviousMessages(messages, sckId, usr) {
-    var dados = [];
-    var i = searchJSON(messages.users, usr);
-    if (i > -1) {
-        for (const roomMsg of messages.posts) {
-            var msg = CryptoJS.AES.decrypt(roomMsg.message, process.env.CRYPT_KEY).toString(CryptoJS.enc.Utf8);
-            dados.push({
-                "user": messages.users[i].name,
-                "message": encodeURIComponent(msg),
-                "date": roomMsg.date_add,
-                "img": messages.users[i].img,
-                "cod": messages.users[i].cod
-            });
-        }
+async function sendPreviousMessages(messages, sckId, usr) {
+let dados = [];
+    for (const roomMsg of messages.posts) {
+        var msg = CryptoJS.AES.decrypt(roomMsg.message, process.env.CRYPT_KEY).toString(CryptoJS.enc.Utf8);
+        const mstMsg = await montMsgsRoom( {cod: roomMsg.user, message:msg, date: roomMsg.date_add}, dados ) ;
+        dados.push(mstMsg);
     }
     io.to(sckId).emit('previousMessage', dados);
 }
@@ -355,14 +356,14 @@ function insertMessageDB(data) {
 
         const getUsrData = async function (data) {
             var infoUsr = await getUsrInfo(data.cod);
-            var userChat = infoUsr.name;
+            // var userChat = infoUsr.name;
             var d = new Date().toISOString();
             db.updateOne({
                 room: data.room
             }, {
                 $push: {
                     posts: {
-                        user: userChat,
+                        user: data.cod,
                         message: CryptoJS.AES.encrypt(decodeURIComponent(data.message), process.env.CRYPT_KEY).toString(),
                         date_add: d,
                         ip: data.ip
@@ -372,7 +373,7 @@ function insertMessageDB(data) {
                 assert.equal(null, err);
             });
             io.in(data.room).emit('sendMessage', {
-                user: userChat,
+                user: data.cod,
                 message: data.message,
                 cod: data.cod,
                 img: infoUsr.img,
