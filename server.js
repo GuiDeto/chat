@@ -30,6 +30,7 @@ app.route('/api/:id/:cod')
     .post(async function (req, res) {
         if (req.params.cod === process.env.API_CHAT_KEY) {
             try {
+                console.log(req.body);
                 const resp = await createRoom(req.body);
                 if (resp.ok) {
                     res.status(202).send({
@@ -57,7 +58,6 @@ app.route('/api/:room/:cod').put(async function (req, res) {
     if (req.params.cod === process.env.API_CHAT_KEY) {
         try {
             const resp = await addUsersRoom(req.body);
-            console.log(req.body);
             if (resp.ok) {
                 res.status(202).send({
                     success: 'true',
