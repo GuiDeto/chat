@@ -30,7 +30,6 @@ app.route('/api/:id/:cod')
     .post(async function (req, res) {
         if (req.params.cod === process.env.API_CHAT_KEY) {
             try {
-                console.log(req.body);
                 const resp = await createRoom(req.body);
                 if (resp.ok) {
                     res.status(202).send({
@@ -50,7 +49,7 @@ app.route('/api/:id/:cod')
                 assert.equal(null, error);
             }
         } else {
-            res.send(req).status('404');
+            res.send('Codigo incorreto:' + req.params.cod).status('200');
         }
     });
 
