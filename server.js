@@ -34,7 +34,7 @@ app.route('/api/:sala/:cod')
                     const resp = await createRoom(req.body);
                     let links = [];
                     for (const item of req.body.users) {
-                        links.push({link: `${req.headers.host}/${req.body.room}/${item.cod}`, nome: item.name});
+                        links.push({link: `${req.headers.host}/${req.body.room}/${item.cod}`, nome: item.name, img: item.img});
                     }
                     if (resp.n === 1) {
                         res.status(201).send({
