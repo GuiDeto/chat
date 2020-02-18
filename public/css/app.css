@@ -264,26 +264,34 @@ html {
 }
 
 
-#historyMessage::-webkit-scrollbar-track
+.scrollbar::-webkit-scrollbar-track
 {
 	-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
 	background-color: rgba(245, 245, 245, 0);
 	border-radius: 10px;
 }
 
-#historyMessage::-webkit-scrollbar
+.scrollbar::-webkit-scrollbar
 {
 	width: 10px;
 	background-color: rgba(245, 245, 245, 0);
 }
 
-#historyMessage::-webkit-scrollbar-thumb
+.scrollbar::-webkit-scrollbar-thumb
 {
 	border-radius: 10px;
-	background-image: -webkit-gradient(linear,
-									   left bottom,
-									   left top,
-									   color-stop(0.44, rgba(122, 154, 217, 0.719)),
-									   color-stop(0.72, rgba(73, 125, 189, 0.63)),
-									   color-stop(0.86, rgba(28, 58, 148, 0.554)));
+	background-image: -webkit-gradient(linear, left bottom, left top, color-stop(0.44, hsla(220, 56%, 66%, 0.36)), color-stop(0.72, hsla(233, 63%, 27%, 0.38)), color-stop(0.86, hsla(225, 45%, 28%, 0.15)));
+}
+
+@keyframes pisca_pisca {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 0; }
+}
+.pisca_pisca {
+  -webkit-animation: pisca_pisca .75s linear infinite;
+  -moz-animation: pisca_pisca .75s linear infinite;
+  -ms-animation: pisca_pisca .75s linear infinite;
+  -o-animation: pisca_pisca .75s linear infinite;
+  animation: pisca_pisca .75s linear infinite;
 }

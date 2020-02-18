@@ -26,23 +26,34 @@ app.use('/styles', express.static(path.join(__dirname, 'public/css')));
 app.use('/download', express.static(path.join(__dirname, 'public/upload_files')));
 app.post('/file-upload', upload_files.array('source_file[]'), process_upload);
 
-app.route('/api/:id/:cod')
+app.route('/api/:sala/:cod')
     .post(async function (req, res) {
         if (req.params.cod === process.env.API_CHAT_KEY) {
             try {
-                const resp = await createRoom(req.body);
-                if (resp.ok) {
-                    res.status(202).send({
-                        success: 'true',
-                        message: 'successfuly',
-                        id: req.params.id,
-                        cod: req.params.cod,
-                        status: resp
-                    });
-                } else {
-                    res.status(500).send({
-                        message: "Houve algum problema ao criar sala!",
-                        status: resp
+                if(req.body.room.length>4){
+                    const resp = await createRoom(req.body);
+                    let links = [];
+                    for (const item of req.body.users) {
+                        links.push({link: `${req.headers.host}/${req.body.room}/${item.cod}`, nome: item.name});
+                    }
+                    if (resp.n === 1) {
+                        res.status(201).send({
+                            success: true,
+                            message: `Sala ${req.body.room} criada!`,
+                            status: resp,
+                            links: links
+                        });
+                    } else {
+                        res.status(500).send({
+                            message: "Houve algum problema ao criar sala!",
+                            status: resp,
+                            success: false
+                        });
+                    }
+                }else{
+                    res.status(400).send({
+                        success: false,
+                        message: `Sala ${req.body.room} não foi criada!`
                     });
                 }
             } catch (error) {
@@ -56,18 +67,34 @@ app.route('/api/:id/:cod')
 app.route('/api/:room/:cod').put(async function (req, res) {
     if (req.params.cod === process.env.API_CHAT_KEY) {
         try {
-            const resp = await addUsersRoom(req.body);
-            if (resp.ok) {
-                res.status(202).send({
-                    success: 'true',
-                    message: 'successfuly',
-                    sala: req.params.room,
-                    status: resp
-                });
-            } else {
-                res.status(500).send({
-                    message: "Houve algum problema ao adicionar usuario na sala!",
-                    status: resp
+            if(req.body.room.length && req.body.name.length && req.body.cod.length && req.body.img.length && req.body.cargo.length  ){
+                const chkRoom = await chkRoomExists(req.body.room);
+                if(typeof(chkRoom)==='string'){
+                    const resp = await addUsersRoom(req.body);
+                    if ( resp.n === 1) {
+                        res.status(202).send({
+                            success: true,
+                            message: `Novo integrante ${req.body.name} adicionado com sucesso`,
+                            sala: req.body.room,
+                            status: resp
+                        });
+                    } else {
+                        res.status(500).send({
+                            message: 'Houve algum problema ao adicionar usuário!',
+                            status: resp,
+                            success: false
+                        });
+                    }
+                }else{
+                    res.status(400).send({
+                        message: chkRoom.error,
+                        success: false
+                    });
+                }
+            }else{
+                res.status(400).send({
+                    message: "Falta informações!",
+                    success: false
                 });
             }
         } catch (error) {
@@ -93,32 +120,6 @@ app.get('/:b/:u', (req, res) => {
 var Promise = require('bluebird');
 var fs = Promise.promisifyAll(require('fs'));
 var sanitize = require("sanitize-filename");
-
-function process_upload(req, res) {
-    if (req.files) {
-        var upload_dir = path.join(__dirname, 'public/upload_files');
-        var room = req.headers.referer.split('/')[3];
-        var cdgUsr = req.headers.referer.split('/')[4];
-        const sanitized_filename = [];
-
-        Promise.resolve(req.files)
-            .each(function (file_incoming, idx) {
-                sanitized_filename.push(sanitize(file_incoming.originalname));
-                const file_to_save = path.join(upload_dir, sanitized_filename[0]);
-                return fs
-                    .writeFileAsync(file_to_save, file_incoming.buffer)
-            })
-            .then(function (e) {
-                insertMessageDB({
-                    cod: cdgUsr,
-                    room: room,
-                    message: encodeURIComponent(`<a href='/download/${sanitized_filename[0]}' target='_blank'>baixar o arquivo</a>`),
-                    ip: req.connection.remoteAddress
-                });
-                return res.sendStatus(200);
-            });
-    }
-}
 
 io.sockets.on('connection', function (socket) {
     socket.on('create', function (data) {
@@ -174,11 +175,42 @@ io.sockets.on('connection', function (socket) {
     });
 });
 
+const loadApp = server.listen(process.env.PORT || 3000, () => {
+    console.log('Server on port: ' + loadApp.address().port);
+});
+
 function showErro(erros) {
     io.to(erros.id).emit('erro', {
         erro: erros.msg
     });
 }
+
+function process_upload(req, res) {
+    if (req.files) {
+        var upload_dir = path.join(__dirname, 'public/upload_files');
+        var room = req.headers.referer.split('/')[3];
+        var cdgUsr = req.headers.referer.split('/')[4];
+        const sanitized_filename = [];
+
+        Promise.resolve(req.files)
+            .each(function (file_incoming, idx) {
+                sanitized_filename.push(sanitize(file_incoming.originalname.toLowerCase()));
+                const file_to_save = path.join(upload_dir, sanitized_filename[0]);
+                return fs
+                    .writeFileAsync(file_to_save, file_incoming.buffer)
+            })
+            .then(function (e) {
+                insertMessageDB({
+                    cod: cdgUsr,
+                    room: room,
+                    message: encodeURIComponent(`<a href='/download/${sanitized_filename[0]}' title='${sanitized_filename[0]}' target='_blank'><i class='fas fa-download text-warning pisca_pisca' style='font-size:20px'></i> baixar o arquivo</a>`),
+                    ip: req.connection.remoteAddress
+                });
+                return res.sendStatus(200);
+            });
+    }
+}
+
 const createRoom = function (dados) {
     return new Promise(function (resolve, reject) {
         mongo.connect(process.env.MONGO_URL, {
@@ -231,12 +263,13 @@ const addUsersRoom = function (dados) {
         })
     })
 }
+
 const getUsrInfo = function (cod) {
     return new Promise(function (resolve, reject) {
         mongo.connect(process.env.MONGO_URL, {
             useNewUrlParser: true,
             useUnifiedTopology: true
-        }, (err, client) => {
+        }, function(err, client) {
             assert.equal(null, err);
             let db = client.db('chat_sisc').collection('posts');
             db.find({
@@ -248,9 +281,35 @@ const getUsrInfo = function (cod) {
             }).project({
                 users: 1
             }).limit(1).toArray(function (err, docs) {
-                var infoUsr = searchJSON(docs[0].users, cod);
-                var dados = docs[0].users[infoUsr];
-                resolve(dados);
+                assert.equal(null, err);
+                if(docs[0] && docs[0].users.length){
+                    var infoUsr = searchJSON(docs[0].users, cod);
+                    var dados = docs[0].users[infoUsr];
+                    resolve(dados);
+                }
+            });
+        })
+    })
+}
+const chkRoomExists = function (room) {
+    return new Promise(function (resolve, reject) {
+        mongo.connect(process.env.MONGO_URL, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true
+        }, function(err, client) {
+            assert.equal(null, err);
+            let db = client.db('chat_sisc').collection('posts');
+            db.find({
+                room: room
+            }).project({
+                room: 1
+            }).limit(1).toArray(function (err, docs) {
+                assert.equal(null, err);
+                if(docs.length && docs[0].room.length){
+                    resolve(docs[0].room);
+                }else{
+                    resolve({error:'Está sala não existe!'});
+                }
             });
         })
     })
@@ -301,10 +360,6 @@ const getInfoRoom = function (room) {
         })
     })
 }
-const loadApp = server.listen(process.env.PORT || 3000, () => {
-    console.log('Server on port: ' + loadApp.address().port);
-});
-
 function showOldMessagesChat(r, sckId, usr) {
     mongo.connect(process.env.MONGO_URL, {
         useNewUrlParser: true,
@@ -317,13 +372,20 @@ function showOldMessagesChat(r, sckId, usr) {
             room: r
         }).limit(1).toArray(function (err, docs) {
             if (err) throw err;
+            if (!isEmpty(docs[0].posts)) {
             var roomData = docs[0];
-
-            if (roomData.posts.length > 0) {
                 sendPreviousMessages(roomData, sckId, usr);
             }
         });
     });
+}
+function isEmpty(obj) {
+    for (const key in obj) {
+        if (obj.hasOwnProperty(key)) {
+            if(obj[key].length === 0)return true
+        }
+    }
+    return false;
 }
 async function montMsgsRoom(data) {
     var infoUsr = await getUsrInfo(data.cod);
@@ -334,7 +396,6 @@ async function montMsgsRoom(data) {
         "cod": data.cod
     };
 }
-
 async function sendPreviousMessages(messages, sckId, usr) {
 let dados = [];
     for (const roomMsg of messages.posts) {
@@ -344,7 +405,6 @@ let dados = [];
     }
     io.to(sckId).emit('previousMessage', dados);
 }
-
 function insertMessageDB(data) {
     mongo.connect(process.env.MONGO_URL, {
         useNewUrlParser: true,
@@ -383,7 +443,6 @@ function insertMessageDB(data) {
         getUsrData(data);
     })
 }
-
 function insertInfoUsrDb(data) {
     return new Promise(function(resolve, reject){
         mongo.connect(process.env.MONGO_URL, {
@@ -439,7 +498,6 @@ const getIPInfo = function(ip) {
           })
     });
 }
-
 function searchJSON(arr, s) {
     let i, key;
 
@@ -448,11 +506,9 @@ function searchJSON(arr, s) {
             if (arr[i].hasOwnProperty(key) && arr[i][key].indexOf(s) > -1)
                 return i;
 }
-
 function findArr(arr, s) {
     return Object.values(arr).indexOf(s);
 }
-
 function getUrlVars(url) {
     var vars = {};
     var parts = url.replace(/[?&]+([^=&]+)=([^&]*)/gi, function (m, key, value) {
