@@ -29,36 +29,44 @@ app.post('/file-upload', upload_files.array('source_file[]'), process_upload);
 app.route('/api/:sala/:cod')
     .post(async function (req, res) {
         if (req.params.cod === process.env.API_CHAT_KEY) {
-            try {
-                if(req.body.room.length>4){
-                    const resp = await createRoom(req.body);
-                    let links = [];
-                    for (const item of req.body.users) {
-                        links.push({link: `${req.headers.host}/${req.body.room}/${item.cod}`, nome: item.name, img: item.img});
-                    }
-                    if (resp.n === 1) {
-                        res.status(201).send({
-                            success: true,
-                            message: `Sala ${req.body.room} criada!`,
-                            status: resp,
-                            links: links
-                        });
-                    } else {
-                        res.status(500).send({
-                            message: "Houve algum problema ao criar sala!",
-                            status: resp,
-                            success: false
-                        });
+            const chkRoom = await chkRoomExists(req.body.room);
+                if(typeof(chkRoom)==='string'){
+                    try {
+                        if(req.body.room.length>4){
+                            const resp = await createRoom(req.body);
+                            let links = [];
+                            for (const item of req.body.users) {
+                                links.push({link: `${req.headers.host}/${req.body.room}/${item.cod}`, nome: item.name, img: item.img});
+                            }
+                            if (resp.n === 1) {
+                                res.status(201).send({
+                                    success: true,
+                                    message: `Sala ${req.body.room} criada!`,
+                                    status: resp,
+                                    links: links
+                                });
+                            } else {
+                                res.status(500).send({
+                                    message: "Houve algum problema ao criar sala!",
+                                    status: resp,
+                                    success: false
+                                });
+                            }
+                        }else{
+                            res.status(400).send({
+                                success: false,
+                                message: `Sala ${req.body.room} não foi criada!`
+                            });
+                        }
+                    } catch (error) {
+                        assert.equal(null, error);
                     }
                 }else{
                     res.status(400).send({
                         success: false,
-                        message: `Sala ${req.body.room} não foi criada!`
+                        message: chkRoom.error
                     });
                 }
-            } catch (error) {
-                assert.equal(null, error);
-            }
         } else {
             res.send('Codigo incorreto:' + req.params.cod).status('200');
         }
