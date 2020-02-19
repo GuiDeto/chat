@@ -3,7 +3,6 @@ const express = require('express');
 const path = require('path');
 const assert = require('assert');
 const upload_files = require('multer')();
-const mongo = require('mongodb').MongoClient;
 const app = express();
 const server = require('http').createServer(app);
 const io = require('socket.io')(server);
@@ -11,6 +10,15 @@ const usrsOnline = {};
 const CryptoJS = require('crypto-js');
 const bodyParser = require('body-parser');
 const fetch = require('node-fetch');
+const db = require('./models/db');
+
+db.connect(process.env.MONGO_URL, (err)=> {
+    if (err) {
+        console.log(err);
+        process.exit(1)
+    }
+    console.log('MonngoDB Connected');
+});
 
 app.use(bodyParser.json());
 
@@ -26,11 +34,11 @@ app.use('/styles', express.static(path.join(__dirname, 'public/css')));
 app.use('/download', express.static(path.join(__dirname, 'public/upload_files')));
 app.post('/file-upload', upload_files.array('source_file[]'), process_upload);
 
-app.route('/api/:sala/:cod')
+app.route('/api/sala/:cod')
     .post(async function (req, res) {
         if (req.params.cod === process.env.API_CHAT_KEY) {
             const chkRoom = await chkRoomExists(req.body.room);
-                if(typeof(chkRoom)==='string'){
+                if(!chkRoom){
                     try {
                         if(req.body.room.length>4){
                             const resp = await createRoom(req.body);
@@ -64,20 +72,19 @@ app.route('/api/:sala/:cod')
                 }else{
                     res.status(400).send({
                         success: false,
-                        message: chkRoom.error
+                        message: 'Está sala ('+req.body.room+') já existe!'
                     });
                 }
         } else {
             res.send('Codigo incorreto:' + req.params.cod).status('200');
         }
     });
-
 app.route('/api/:room/:cod').put(async function (req, res) {
     if (req.params.cod === process.env.API_CHAT_KEY) {
         try {
             if(req.body.room.length && req.body.name.length && req.body.cod.length && req.body.img.length && req.body.cargo.length  ){
                 const chkRoom = await chkRoomExists(req.body.room);
-                if(typeof(chkRoom)==='string'){
+                if(chkRoom){
                     const resp = await addUsersRoom(req.body);
                     if ( resp.n === 1) {
                         res.status(202).send({
@@ -95,7 +102,7 @@ app.route('/api/:room/:cod').put(async function (req, res) {
                     }
                 }else{
                     res.status(400).send({
-                        message: chkRoom.error,
+                        message: 'Sala não existe!',
                         success: false
                     });
                 }
@@ -113,11 +120,8 @@ app.route('/api/:room/:cod').put(async function (req, res) {
     }
 });
 
-app.get('/:b/:u', (req, res) => {
-    var gravalog = async function(data){
-        var newLog = await insertInfoUsrDb(data);
-    }
-    gravalog({cod:req.params.u, room:req.params.b, ip:req.connection.remoteAddress, tipo:'logou'});
+app.get('/:b/:u', async (req, res) => {
+    var newLog = await insertInfoUsrDb({cod:req.params.u, room:req.params.b, ip:req.connection.remoteAddress, tipo:'logou'});
 
     req.params = Object.assign(req.params, {
         ip: req.connection.remoteAddress
@@ -129,30 +133,24 @@ var Promise = require('bluebird');
 var fs = Promise.promisifyAll(require('fs'));
 var sanitize = require("sanitize-filename");
 
-io.sockets.on('connection', function (socket) {
-    socket.on('create', function (data) {
+io.sockets.on('connection', async function (socket) {
+    socket.on('create', async function (data) {
         if ((typeof (data.room) == 'string' && 1 < data.room.length) && (typeof (data.user) == 'string' && 1 < data.user.length)) {
-            const showInfoRoom = async function (r) {
-                const infoRoom = await getInfoRoom(r);
+                const infoRoom = await getInfoRoom(data.room);
                 if (infoRoom != undefined) {
                     const chkUsrRoom = searchJSON(infoRoom.users, data.user);
                     if (chkUsrRoom != undefined) {
-                        socket.join(data.room, function () {
+                        socket.join(data.room, async function () {
                             console.log(`Conexão estabelecida id: ${socket.id} Sala: ${data.room} Usuario: ${data.user}`);
                             showOldMessagesChat(data.room, socket.id, data.user);
                             usrsOnline[socket.id] = data.user;
-                            const showUserRoom = async function (r) {
-                                const usersRoom = await getUsrsRoom(r);
-                                io.in(data.room).emit('loadUsersRoom', usersRoom);
-                            }
-                            const getUserImg = async function (u) {
-                                const showUserData = await getUsrInfo(u);
-                                io.to(socket.id).emit('loadMyPicture', {
-                                    img: showUserData.img
-                                });
-                            }
-                            showUserRoom(data.room);
-                            getUserImg(data.user);
+                            const usersRoom = await getUsrsRoom(data.room);
+                            io.in(data.room).emit('loadUsersRoom', usersRoom);
+
+                            const showUserData = await getUsrInfo(data.user);
+                            io.to(socket.id).emit('loadMyPicture', {
+                                img: showUserData.img
+                            });
                         });
                     } else {
                         showErro({
@@ -166,8 +164,6 @@ io.sockets.on('connection', function (socket) {
                         id: socket.id
                     });
                 }
-            }
-            showInfoRoom(data.room);
         } else {
             showErro({
                 msg: 'Dados incorretos para montar a sala!',
@@ -221,37 +217,26 @@ function process_upload(req, res) {
 
 const createRoom = function (dados) {
     return new Promise(function (resolve, reject) {
-        mongo.connect(process.env.MONGO_URL, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true
-        }, (err, client) => {
-            assert.equal(null, err);
-            let db = client.db('chat_sisc').collection('posts');
-            try {
-                db.insertOne({
-                    room: dados.room,
-                    id: dados.id,
-                    users: dados.users,
-                    posts: []
-                }).then(e => {
-                    resolve(e.result);
-                });
-            } catch (error) {
-                assert.equal(null, error);
-            }
-        })
+        let Posts = db.get().collection('posts');
+        try{
+            Posts.insertOne({
+                room: dados.room,
+                id: dados.id,
+                users: dados.users,
+                posts: []
+            }).then(e => {
+                resolve(e.result);
+            });
+        } catch (error) {
+            assert.equal(null, error);
+        }
     })
 }
 const addUsersRoom = function (dados) {
     return new Promise(function (resolve, reject) {
-        mongo.connect(process.env.MONGO_URL, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true
-        }, (err, client) => {
-            assert.equal(null, err);
-            let db = client.db('chat_sisc').collection('posts');
+        let Posts = db.get().collection('posts');
             try {
-                db.updateOne({
+                Posts.updateOne({
                     room: dados.room
                 }, {
                     $push: {
@@ -268,19 +253,14 @@ const addUsersRoom = function (dados) {
             } catch (error) {
                 assert.equal(null, error);
             }
-        })
     })
 }
 
 const getUsrInfo = function (cod) {
     return new Promise(function (resolve, reject) {
-        mongo.connect(process.env.MONGO_URL, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true
-        }, function(err, client) {
-            assert.equal(null, err);
-            let db = client.db('chat_sisc').collection('posts');
-            db.find({
+        let Posts = db.get().collection('posts');
+        try{
+            Posts.find({
                 users: {
                     $elemMatch: {
                         cod: cod
@@ -295,42 +275,39 @@ const getUsrInfo = function (cod) {
                     var dados = docs[0].users[infoUsr];
                     resolve(dados);
                 }
-            });
-        })
+            })
+        }catch(err){
+            assert.equal(null, err);
+        }
     })
 }
+
 const chkRoomExists = function (room) {
     return new Promise(function (resolve, reject) {
-        mongo.connect(process.env.MONGO_URL, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true
-        }, function(err, client) {
-            assert.equal(null, err);
-            let db = client.db('chat_sisc').collection('posts');
-            db.find({
+        let Posts = db.get().collection('posts');
+        try {
+            Posts.find({
                 room: room
             }).project({
                 room: 1
             }).limit(1).toArray(function (err, docs) {
                 assert.equal(null, err);
                 if(docs.length && docs[0].room.length){
-                    resolve(docs[0].room);
+                    resolve(true);
                 }else{
-                    resolve({error:'Está sala não existe!'});
+                    resolve(false);
                 }
             });
-        })
+        } catch (error) {
+            assert.equal(null, err);
+        }
     })
 }
 const getUsrsRoom = function (room) {
     return new Promise(function (resolve, reject) {
-        mongo.connect(process.env.MONGO_URL, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true
-        }, (err, client) => {
-            assert.equal(null, err);
-            let db = client.db('chat_sisc').collection('posts');
-            db.find({
+        let Posts = db.get().collection('posts');
+        try {
+            Posts.find({
                 room: room
             }).project({
                 users: 1
@@ -349,35 +326,30 @@ const getUsrsRoom = function (room) {
                 }
                 resolve(usrRoom);
             });
-        })
+        } catch (error) {
+            assert.equal(null, err);
+        }
     })
 }
 const getInfoRoom = function (room) {
     return new Promise(function (resolve, reject) {
-        mongo.connect(process.env.MONGO_URL, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true
-        }, (err, client) => {
-            assert.equal(null, err);
-            let db = client.db('chat_sisc').collection('posts');
-            db.find({
+        let Posts = db.get().collection('posts');
+        try {
+            Posts.find({
                 room: room
             }).limit(1).toArray(function (err, docs) {
                 resolve(docs[0]);
             });
-        })
+        } catch (error) {
+            assert.equal(null, err);
+        }
     })
 }
 function showOldMessagesChat(r, sckId, usr) {
-    mongo.connect(process.env.MONGO_URL, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true
-    }, function (err, client) {
-        assert.equal(null, err);
-
-        let db = client.db('chat_sisc').collection('posts');
-        db.find({
-            room: r
+    let Posts = db.get().collection('posts');
+    try {
+        Posts.find({
+        room: r
         }).limit(1).toArray(function (err, docs) {
             if (err) throw err;
             if (!isEmpty(docs[0].posts)) {
@@ -385,7 +357,9 @@ function showOldMessagesChat(r, sckId, usr) {
                 sendPreviousMessages(roomData, sckId, usr);
             }
         });
-    });
+    } catch (error) {
+        assert.equal(null, err);
+    }
 }
 function isEmpty(obj) {
     for (const key in obj) {
@@ -413,98 +387,72 @@ let dados = [];
     }
     io.to(sckId).emit('previousMessage', dados);
 }
-function insertMessageDB(data) {
-    mongo.connect(process.env.MONGO_URL, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true
-    }, (err, client) => {
-        assert.equal(null, err);
-
-        let db = client.db('chat_sisc').collection('posts');
-
-        const getUsrData = async function (data) {
-            var infoUsr = await getUsrInfo(data.cod);
-            // var userChat = infoUsr.name;
+async function insertMessageDB(data) {
+    let Posts = db.get().collection('posts');
+    try {
+        var infoUsr = await getUsrInfo(data.cod);
+        var d = new Date().toISOString();
+        Posts.updateOne({
+            room: data.room
+        }, {
+            $push: {
+                posts: {
+                    user: data.cod,
+                    message: CryptoJS.AES.encrypt(decodeURIComponent(data.message), process.env.CRYPT_KEY).toString(),
+                    date_add: d,
+                    ip: data.ip
+                }
+            }
+        }, function (err, res) {
+            assert.equal(null, err);
+        });
+        io.in(data.room).emit('sendMessage', {
+            user: data.cod,
+            message: data.message,
+            cod: data.cod,
+            img: infoUsr.img,
+            date: d
+        });
+    } catch (error) {
+        assert.equal(null, error);
+    }
+}
+async function insertInfoUsrDb(data) {
+    return new Promise( async function(resolve, reject){
+        let Posts = db.get().collection('posts');
+        try {
             var d = new Date().toISOString();
-            db.updateOne({
+            // var infoIP = await getIPInfo(data.ip);
+            Posts.updateOne({
                 room: data.room
             }, {
                 $push: {
-                    posts: {
+                    logs: {
                         user: data.cod,
-                        message: CryptoJS.AES.encrypt(decodeURIComponent(data.message), process.env.CRYPT_KEY).toString(),
                         date_add: d,
-                        ip: data.ip
+                        ip: data.ip,
+                        tipo: data.tipo
+                        // info: infoIP
                     }
                 }
             }, function (err, res) {
                 assert.equal(null, err);
             });
-            io.in(data.room).emit('sendMessage', {
-                user: data.cod,
-                message: data.message,
-                cod: data.cod,
-                img: infoUsr.img,
-                date: d
-            });
+            resolve('update!');
+        } catch (error) {
+            assert.equal(null, error);
         }
-        getUsrData(data);
     })
 }
-function insertInfoUsrDb(data) {
-    return new Promise(function(resolve, reject){
-        mongo.connect(process.env.MONGO_URL, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true
-        }, (err, client) => {
-            assert.equal(null, err);
 
-            let db = client.db('chat_sisc').collection('posts');
+async function getIPInfo(ip) {
+    let response = await fetch('https://ipapi.co/'+ip+'/json');
 
-            const insertLogUsr = async function (data) {
-                var d = new Date().toISOString();
-                // var infoIp = await getIPInfo(data.ip);
-                db.updateOne({
-                    room: data.room
-                }, {
-                    $push: {
-                        logs: {
-                            user: data.cod,
-                            date_add: d,
-                            ip: data.ip,
-                            tipo: data.tipo
-                        }
-                    }
-                }, function (err, res) {
-                    assert.equal(null, err);
-                });
-                resolve('update!');
-            }
-            insertLogUsr(data);
-        });
-    })
-
-}
-const getIPInfo = function(ip) {
-    new Promise(function (resolve, reject){
-        var apiUrl = 'https://ipapi.co/189.61.21.222/json';
-        // // var apiUrl = 'https://ipapi.co/'+ip+'/json';
-        // var result = fetch(apiUrl)
-        // .then(res => res.json())
-        // .then(json => resolve(json));
-
-        return fetch(apiUrl).then(response => {
-            console.log(response.json());
-            resolve(response.json())
-            // if (response.ok) {
-            //   resolve(response)
-            // } else {
-            //   reject(new Error('error'))
-            // }
-          }, error => {
-            reject(new Error(error.message))
-          })
-    });
+    if (response.ok) {
+        return await response.json();
+    } else {
+        return response.status;
+    }
 }
 function searchJSON(arr, s) {
     let i, key;
