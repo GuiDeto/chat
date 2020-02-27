@@ -139,6 +139,7 @@ io.sockets.on('connection', async function (socket) {
                 const infoRoom = await getInfoRoom(data.room);
                 if (infoRoom != undefined) {
                     const chkUsrRoom = searchJSON(infoRoom.users, data.user);
+
                     if (chkUsrRoom != undefined) {
                         socket.join(data.room, async function () {
                             console.log(`Conexão estabelecida id: ${socket.id} Sala: ${data.room} Usuario: ${data.user}`);
@@ -455,12 +456,9 @@ async function getIPInfo(ip) {
     }
 }
 function searchJSON(arr, s) {
-    let i, key;
+     for (var i = 0; i < arr.length; i++)
+         if (arr[i].cod == s)return i
 
-    for (i = arr.length; i--;)
-        for (key in arr[i])
-            if (arr[i].hasOwnProperty(key) && arr[i][key].indexOf(s) > -1)
-                return i;
 }
 function findArr(arr, s) {
     return Object.values(arr).indexOf(s);
