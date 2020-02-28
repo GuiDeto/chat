@@ -87,7 +87,7 @@ function showErro(m) {
     Swal.fire({
         icon: 'error',
         title: 'SISC CHAT',
-        text: m.erro,
+        html: m.erro,
       })
 }
 
