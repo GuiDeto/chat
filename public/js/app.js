@@ -18,8 +18,14 @@ const socket = io();
 
 const messageUsr = document.querySelectorAll(".type_msg")[0];
 window.onload = function () {
-
+    let src = '/sounds/beep.mp3';
+    let audio = new Audio(src);
     socket.on("sendMessage", function (message) {
+        if(!document.hasFocus()){
+            var msg = decodeURIComponent(message.message.replace(/%0A/ig,'<br />'));
+            if(message.cod!=user)notifyMe({"icon": message.img, "title":"Mensagem recebida", "body": msg});
+            audio.play();
+        }
         renderMessage(message);
     });
 
@@ -59,16 +65,34 @@ window.onload = function () {
 
 }
 
+function notifyMe(n) {
+    if (Notification.permission !== 'granted')
+     Notification.requestPermission();
+    else {
+     var icon = (n.icon && n.icon.length )?n.icon:'https://cdn0.iconfinder.com/data/icons/Free-Icons-Shimmer-01-Creative-Freedom/256/warning.png',
+     title = (n.title && n.title.length )?n.title:'Notificação',
+     body = (n.body && n.body.length )? n.body.replace(/(<([^>]+)>)/ig,"") :'bla bla bla';
+
+     var notification = new Notification(title, {
+      icon: icon,
+      body: body,
+     });
+     notification.onclick = function() {
+        window.focus();
+        this.cancel();
+     };
+    }
+   }
+
 function renderMessage(message) {
     var msg = decodeURIComponent(message.message.replace(/%0A/ig,'<br />'));
     var data = timeSince(message.date);
-
     var texto_people = '<div class="d-flex justify-content-start mb-4"><div class="img_cont_msg"><img src="' + message.img + '" class="rounded-circle user_img_msg"></div><div class="msg_cotainer">' + msg + '<span class="msg_time">' + data + '</span></div></div>';
-
     var text_me = '<div class="d-flex justify-content-end mb-4"><div class="msg_cotainer_send">' +
     msg + '<span class="msg_time_send">' + data + '</span></div><div class="img_cont_msg"><img src="' + message.img + '" class="rounded-circle user_img_msg"></div></div>';
 
-    var usrMsg = message.cod != user ? texto_people : text_me;
+    usrMsg = message.cod!=user?texto_people:text_me;
+
     document.getElementById("historyMessage").innerHTML += usrMsg;
     var objDiv = document.getElementById("historyMessage");
     objDiv.scrollTop = objDiv.scrollHeight;

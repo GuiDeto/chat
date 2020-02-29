@@ -32,6 +32,8 @@ app.use('/plgs', express.static(path.join(__dirname, 'node_modules')));
 app.use('/scripts', express.static(path.join(__dirname, 'public/js')));
 app.use('/styles', express.static(path.join(__dirname, 'public/css')));
 app.use('/download', express.static(path.join(__dirname, 'public/upload_files')));
+app.use('/sounds', express.static(path.join(__dirname, 'public/sounds')));
+app.use('/images', express.static(path.join(__dirname, 'public/img')));
 app.post('/file-upload', upload_files.array('source_file[]'), process_upload);
 
 app.route('/api/sala/:cod')
