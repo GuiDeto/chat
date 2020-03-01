@@ -11,6 +11,18 @@ const CryptoJS = require('crypto-js');
 const bodyParser = require('body-parser');
 const fetch = require('node-fetch');
 const db = require('./models/db');
+const fsx = require('fs');
+
+var files = fsx.readdirSync('./public/upload_files');
+console.log(files);
+
+
+// fsx.unlink('./public/upload_files/image127.jpg', (err) => {
+//     if (err) {
+//       console.error(err)
+//       return
+//     }
+// })
 
 db.connect(process.env.MONGO_URL, (err)=> {
     if (err) {
@@ -135,6 +147,7 @@ var Promise = require('bluebird');
 var fs = Promise.promisifyAll(require('fs'));
 var sanitize = require("sanitize-filename");
 
+
 io.sockets.on('connection', async function (socket) {
     socket.on('create', async function (data) {
         if ((typeof (data.room) == 'string' && 1 < data.room.length) && (typeof (data.user) == 'string' && 1 < data.user.length)) {
@@ -191,7 +204,6 @@ function showErro(erros) {
         erro: erros.msg
     });
 }
-
 function process_upload(req, res) {
     if (req.files) {
         var upload_dir = path.join(__dirname, 'public/upload_files');
