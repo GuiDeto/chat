@@ -27,7 +27,7 @@ app.engine('html', require('ejs').renderFile);
 app.use(bodyParser.urlencoded({
     extended: false
 }));
-
+app.use('/favicon.ico', express.static('public/img/favicon.ico'));
 app.use('/plgs', express.static(path.join(__dirname, 'node_modules')));
 app.use('/scripts', express.static(path.join(__dirname, 'public/js')));
 app.use('/styles', express.static(path.join(__dirname, 'public/css')));

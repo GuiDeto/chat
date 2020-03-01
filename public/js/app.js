@@ -69,7 +69,7 @@ function notifyMe(n) {
     if (Notification.permission !== 'granted')
      Notification.requestPermission();
     else {
-     var icon = (n.icon && n.icon.length )?n.icon:'https://cdn0.iconfinder.com/data/icons/Free-Icons-Shimmer-01-Creative-Freedom/256/warning.png',
+     var icon = (n.icon && n.icon.length )?n.icon:'/images/message-icon.png',
      title = (n.title && n.title.length )?n.title:'Notificação',
      body = (n.body && n.body.length )? n.body.replace(/(<([^>]+)>)/ig,"") :'bla bla bla';
 
