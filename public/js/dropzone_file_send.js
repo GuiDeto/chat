@@ -11,7 +11,7 @@ Dropzone.prototype.defaultOptions.dictMaxFilesExceeded = "Você não pode enviar
 
 Dropzone.options.dropchatfiles = {
     paramName: function(n) { return 'source_file[]';},
-    maxFilesize: 5, // MB
+    maxFilesize: 5,
     autoProcessQueue: true,
     uploadMultiple: false,
     parallelUploads: 1,

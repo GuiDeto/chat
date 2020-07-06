@@ -46,8 +46,8 @@ window.onload = function () {
             renderMessage(message);
         }
     });
-
-    if ((typeof(user)=='string' && 1 < user.length) && room.match("sala[1-9]") != null) {
+    console.log(user);
+    if (( typeof(user)=='string' && 1 < user.length) ) {
         socket.emit("create", {
             room: room,
             user: user,
@@ -55,6 +55,7 @@ window.onload = function () {
         });
         socket.emit('login',{ user:user });
     }else{
+        console.log(user);
         this.showErro({erro:'Informações incorretas!'});
     }
     messageUsr.addEventListener("keyup", function (event) {
@@ -70,7 +71,7 @@ function notifyMe(n) {
      Notification.requestPermission();
     else {
      var icon = (n.icon && n.icon.length )?n.icon:'/images/message-icon.png',
-     title = (n.title && n.title.length )?n.title:'Notificação',
+     title = (n.title && n.title.length )?n.title:'Notificação Chat',
      body = (n.body && n.body.length )? n.body.replace(/(<([^>]+)>)/ig,"") :'bla bla bla';
 
      var notification = new Notification(title, {
@@ -133,5 +134,3 @@ function sendMessage() {
     }
     document.querySelectorAll("#messageUsr")[0].value = '';
 }
-
-

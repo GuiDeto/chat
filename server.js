@@ -14,15 +14,17 @@ const db = require('./models/db');
 const fsx = require('fs');
 
 var files = fsx.readdirSync('./public/upload_files');
-console.log(files);
-
-
-// fsx.unlink('./public/upload_files/image127.jpg', (err) => {
-//     if (err) {
-//       console.error(err)
-//       return
-//     }
-// })
+for (const i of files) {
+    if(i!=='.gitignore')deleteFile(i);
+}
+function deleteFile(n){
+    fsx.unlink('./public/upload_files/'+n, (err) => {
+        if (err) {
+          console.error(err)
+          return
+        }
+    })
+}
 
 db.connect(process.env.MONGO_URL, (err)=> {
     if (err) {
