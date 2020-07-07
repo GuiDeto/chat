@@ -55,7 +55,6 @@ window.onload = function () {
         });
         socket.emit('login',{ user:user });
     }else{
-        console.log(user);
         this.showErro({erro:'Informações incorretas!'});
     }
     messageUsr.addEventListener("keyup", function (event) {
