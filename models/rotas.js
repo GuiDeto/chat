@@ -34,7 +34,7 @@ router.post('/api/sala/:cod', async function (req, res) {
                         });
                     }
                 } catch (error) {
-                    assert.equal(null, error);
+                    assert.strictEqual(null, error);
                 }
             }else{
                 res.status(400).send({
@@ -89,10 +89,10 @@ router.put('/api/:room/:cod', async function (req, res) {
 });
 
 router.get('/:b/:u', async (req, res) => {
-    var newLog = await insertInfoUsrDb({cod:req.params.u, room:req.params.b, ip:req.connection.remoteAddress, tipo:'logou'});
+    var newLog = await insertInfoUsrDb({cod:req.params.u, room:req.params.b, ip:req.socket.remoteAddress, tipo:'logou'});
 
     req.params = Object.assign(req.params, {
-        ip: req.connection.remoteAddress
+        ip: req.socket.remoteAddress
     });
     res.render('index.html', req.params);
 });

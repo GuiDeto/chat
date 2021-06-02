@@ -149,7 +149,6 @@ var Promise = require('bluebird');
 var fs = Promise.promisifyAll(require('fs'));
 var sanitize = require("sanitize-filename");
 
-
 io.sockets.on('connection', async function (socket) {
     socket.on('create', async function (data) {
         if ((typeof (data.room) == 'string' && 1 < data.room.length) && (typeof (data.user) == 'string' && 1 < data.user.length)) {
@@ -286,7 +285,7 @@ const getUsrInfo = function (cod) {
             }).project({
                 users: 1
             }).limit(1).toArray(function (err, docs) {
-                assert.equal(null, err);
+                assert.strictEqual(null, err);
                 if(docs[0] && docs[0].users.length){
                     var infoUsr = searchJSON(docs[0].users, cod);
                     var dados = docs[0].users[infoUsr];
@@ -453,11 +452,11 @@ async function insertInfoUsrDb(data) {
                     }
                 }
             }, function (err, res) {
-                assert.equal(null, err);
+                assert.strictEqual(null, err);
             });
             resolve('update!');
         } catch (error) {
-            assert.equal(null, error);
+            assert.strictEqual(null, error);
         }
     })
 }
