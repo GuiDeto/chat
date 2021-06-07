@@ -6,7 +6,6 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <title>Chat</title>
     <link rel="stylesheet" href="/plgs/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css">
     <link rel="stylesheet" href="/styles/app.css" />
     <link rel="stylesheet" href="/plgs/sweetalert2/dist/sweetalert2.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css">
@@ -16,29 +15,25 @@
     <script src="/plgs/bootstrap/dist/js/bootstrap.min.js"></script>
     <script src="/plgs/dropzone/dist/min/dropzone.min.js"></script>
     <script src='/plgs/sweetalert2/dist/sweetalert2.min.js'></script>
+    
   </head>
 
   <body>
     <div class="container-fluid h-100">
-      <div class="row justify-content-center h-100">
-        <div class="col-md-4 col-xl-3 chat d-none d-sm-block">
-          <div class="card mb-sm-3 mb-md-0 contacts_card">
-            <div class="card-body contacts_body scrollbar">
-              <ui class="contacts" id="usersRoom"></ui>
-            </div>
-            <div class="card-footer text-white text-center">Participantes</div>
-          </div>
+      <div class="justify-content-center h-100">
+        <div class="p-0">
+          <ui class="contacts" id="usersRoom"></ui>
         </div>
-        <div class="col-md-8 col-xl-6 chat">
+        <div class="p-0 chat">
           <div class="card">
             <div class="card-header msg_head">
               <div class="d-flex bd-highlight">
                 <div class="img_cont" id='myPicture'></div>
-                <div class="user_info">
-                  <span>Chat SISC</span>
-                  <p>Beta teste 0.0.3</p>
+                <div class="user_info col-6">
+                  <span>Conciliação</span>
+                  <p>Beta 0.0.3</p>
                 </div>
-                <div class="video_cam">
+                <div class="video_cam col-6">
                   <span><i class="fas fa-video"></i></span>
                   <span><i class="fas fa-phone"></i></span>
                 </div>
@@ -66,8 +61,8 @@
       </div>
     </div>
 
-    <div class="modal fade" id='upload-modal' role="dialog" aria-hidden="true">
-      <div class="modal-dialog">
+    <div class="modal fade w-97" id='upload-modal' role="dialog" aria-hidden="true">
+      <div class="modal-dialog modal-sm">
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title">Envie arquivos</h5>
@@ -76,10 +71,22 @@
             </button>
           </div>
           <div class="modal-body">
-            <form id="dropchatfiles" action="/file-upload" method="post" enctype="multipart/form-data" class="dropzone">
-              <div class="fallback">
-                <input name="source_file[]" type="file" multiple="multiple"/>
+            <form id="dropchatfiles" method="post" enctype="multipart/form-data" class="dropzone">
+              <div class="fallback d-none">
+                <input name="source_file" id='send_file_chat' type="file"/>
               </div>
+              <div class="row">
+                  <div class="form-group col-lg-6 col-sm-12">
+                    <label for="">Tipo do arquivo</label>
+                    <select class="custom-select" name="tipo_arquivo" id="tipo_arquivo">
+                        <option selected disabled>Selecione</option>
+                        <option>Proposta de acordo</option>
+                        <option>Acordo</option>
+                        <option>Documentos</option>
+                    </select>
+                    <small class="text-muted">Tipo de arquivo a ser enviado</small>
+                </div>
+            </div>
             </form>
           </div>
           <div class="modal-footer">

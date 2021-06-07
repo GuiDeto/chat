@@ -2,7 +2,18 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const assert = require('assert');
-const upload_files = require('multer')();
+const sanitize = require("sanitize-filename")
+const multer = require('multer')
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+      cb(null, 'public/upload_files/')
+    },
+    filename: function (req, file, cb) {
+      const uniqueSuffix = Date.now() + '-' + sanitize(file.originalname.toLowerCase())
+      cb(null, uniqueSuffix)
+    }
+  })
+const slugify = require('slugify')
 const app = express();
 const server = require('http').createServer(app);
 const io = require('socket.io')(server);
@@ -12,6 +23,8 @@ const bodyParser = require('body-parser');
 const fetch = require('node-fetch');
 const db = require('./models/db');
 const fsx = require('fs');
+
+var upload = multer({ storage: storage })
 
 var files = fsx.readdirSync('./public/upload_files');
 for (const i of files) {
@@ -48,11 +61,12 @@ app.use('/styles', express.static(path.join(__dirname, 'public/css')));
 app.use('/download', express.static(path.join(__dirname, 'public/upload_files')));
 app.use('/sounds', express.static(path.join(__dirname, 'public/sounds')));
 app.use('/images', express.static(path.join(__dirname, 'public/img')));
-app.post('/file-upload', upload_files.array('source_file[]'), process_upload);
+// app.post('/file-upload', upload_files.array('source_file[]'), process_upload);
+app.post('/file-upload', upload.single('file'), process_upload);
 
-app.route('/api/sala/:cod')
+app.route('/api/sala')
     .post(async function (req, res) {
-        if (req.params.cod === process.env.API_CHAT_KEY) {
+        if (req.headers.authorization === process.env.API_CHAT_KEY) {
             const chkRoom = await chkRoomExists(req.body.room);
                 if(!chkRoom){
                     try {
@@ -87,12 +101,15 @@ app.route('/api/sala/:cod')
                     }
                 }else{
                     res.status(400).send({
-                        success: false,
+                        success: true,
                         message: 'Está sala ('+req.body.room+') já existe!'
                     });
                 }
         } else {
-            res.send('Codigo incorreto:' + req.params.cod).status('200');
+            res.status(200).send({
+                message: "Chave da API invalida!",
+                success: false
+            });
         }
     });
 app.route('/api/:room/:cod').put(async function (req, res) {
@@ -147,7 +164,7 @@ app.get('/:b/:u', async (req, res) => {
 
 var Promise = require('bluebird');
 var fs = Promise.promisifyAll(require('fs'));
-var sanitize = require("sanitize-filename");
+
 
 io.sockets.on('connection', async function (socket) {
     socket.on('create', async function (data) {
@@ -205,35 +222,38 @@ function showErro(erros) {
         erro: erros.msg
     });
 }
-function process_upload(req, res) {
-    if (req.files) {
-        var upload_dir = path.join(__dirname, 'public/upload_files');
+async function process_upload(req, res) {
+    if (req.file) {
+        var upload_dir = path.join(__dirname, 'public/upload_files/');
         var room = req.headers.referer.split('/')[3];
         var cdgUsr = req.headers.referer.split('/')[4];
-        const sanitized_filename = [];
+        var sanitized_filename = sanitize(req.file.originalname.toLowerCase());
+        
+        var num_caso = 'asd-f345afssf-fasdf32-fasdf'
 
-        Promise.resolve(req.files)
-            .each(function (file_incoming, idx) {
-                sanitized_filename.push(sanitize(file_incoming.originalname.toLowerCase()));
-                const file_to_save = path.join(upload_dir, sanitized_filename[0]);
-                return fs
-                    .writeFileAsync(file_to_save, file_incoming.buffer)
-            })
-            .then(function (e) {
-                insertMessageDB({
-                    cod: cdgUsr,
-                    room: room,
-                    message: encodeURIComponent(`<a href='/download/${sanitized_filename[0]}' title='${sanitized_filename[0]}' target='_blank'><i class='fas fa-download text-warning pisca_pisca' style='font-size:20px'></i> baixar o arquivo</a>`),
-                    ip: req.connection.remoteAddress
-                });
-                return res.sendStatus(200);
-            });
+        create_folder(upload_dir + num_caso);
+        let name_file = slugify(req.body.tipo_arquivo) + '_' + slugify(req.file.filename)
+        let destFile = upload_dir + num_caso + '/' + name_file
+        
+        fs.copyFile( upload_dir + req.file.filename, destFile, fs.constants.COPYFILE_EXCL, (err) => {
+            if (err)console.log("Error Found:", err)
+            else console.log("\nFile Contents of copied_file:")
+        })
+        
+        insertMessageDB({
+            cod: cdgUsr,
+            room: room,
+            message: encodeURIComponent(`<a href='/download/${num_caso + '/' + name_file}' title='${sanitized_filename}' target='_blank'><i class='fas fa-download text-warning pisca_pisca' style='font-size:20px'></i> ${req.body.tipo_arquivo}</a>`),
+            ip: req.connection.remoteAddress
+        });
     }
+    res.send({status:1})
 }
 
 const createRoom = function (dados) {
+    
     return new Promise(function (resolve, reject) {
-        let Posts = db.get().collection('posts');
+        let Posts = db.get().collection('rooms');
         try{
             Posts.insertOne({
                 room: dados.room,
@@ -250,7 +270,7 @@ const createRoom = function (dados) {
 }
 const addUsersRoom = function (dados) {
     return new Promise(function (resolve, reject) {
-        let Posts = db.get().collection('posts');
+        let Posts = db.get().collection('rooms');
             try {
                 Posts.updateOne({
                     room: dados.room
@@ -274,7 +294,7 @@ const addUsersRoom = function (dados) {
 
 const getUsrInfo = function (cod) {
     return new Promise(function (resolve, reject) {
-        let Posts = db.get().collection('posts');
+        let Posts = db.get().collection('rooms');
         try{
             Posts.find({
                 users: {
@@ -300,7 +320,7 @@ const getUsrInfo = function (cod) {
 
 const chkRoomExists = function (room) {
     return new Promise(function (resolve, reject) {
-        let Posts = db.get().collection('posts');
+        let Posts = db.get().collection('rooms');
         try {
             Posts.find({
                 room: room
@@ -321,7 +341,7 @@ const chkRoomExists = function (room) {
 }
 const getUsrsRoom = function (room) {
     return new Promise(function (resolve, reject) {
-        let Posts = db.get().collection('posts');
+        let Posts = db.get().collection('rooms');
         try {
             Posts.find({
                 room: room
@@ -349,7 +369,7 @@ const getUsrsRoom = function (room) {
 }
 const getInfoRoom = function (room) {
     return new Promise(function (resolve, reject) {
-        let Posts = db.get().collection('posts');
+        let Posts = db.get().collection('rooms');
         try {
             Posts.find({
                 room: room
@@ -362,7 +382,7 @@ const getInfoRoom = function (room) {
     })
 }
 function showOldMessagesChat(r, sckId, usr) {
-    let Posts = db.get().collection('posts');
+    let Posts = db.get().collection('rooms');
     try {
         Posts.find({
         room: r
@@ -404,7 +424,7 @@ let dados = [];
     io.to(sckId).emit('previousMessage', dados);
 }
 async function insertMessageDB(data) {
-    let Posts = db.get().collection('posts');
+    let Posts = db.get().collection('rooms');
     try {
         var infoUsr = await getUsrInfo(data.cod);
         var d = new Date().toISOString();
@@ -435,7 +455,7 @@ async function insertMessageDB(data) {
 }
 async function insertInfoUsrDb(data) {
     return new Promise( async function(resolve, reject){
-        let Posts = db.get().collection('posts');
+        let Posts = db.get().collection('rooms');
         try {
             var d = new Date().toISOString();
             // var infoIP = await getIPInfo(data.ip);
@@ -484,4 +504,9 @@ function getUrlVars(url) {
         vars[key] = value;
     });
     return vars;
+}
+function create_folder(folder){
+    if (!fs.existsSync(folder)){
+        fs.mkdirSync(folder);
+    }
 }

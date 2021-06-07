@@ -2,3 +2,10 @@ node_modules/
 .env
 github.pub
 github
+Gruntfile.js
+package-lock.json
+package.json
+Procfile
+*.rar
+*.pub
+chat
