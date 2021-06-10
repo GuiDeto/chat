@@ -367,6 +367,7 @@ const getUsrsRoom = function (room) {
 }
 const getInfoRoom = function (room) {
     return new Promise(function (resolve, reject) {
+        console.log('entrei');
         let Posts = db.get().collection('rooms');
         try {
             Posts.find({
