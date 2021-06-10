@@ -51,9 +51,7 @@ app.use(bodyParser.json());
 
 app.set('views', path.join(__dirname, 'public'));
 app.engine('html', require('ejs').renderFile);
-app.use(bodyParser.urlencoded({
-    extended: false
-}));
+app.use(bodyParser.urlencoded({extended: false}));
 app.use('/favicon.ico', express.static('public/img/favicon.ico'));
 app.use('/plgs', express.static(path.join(__dirname, 'node_modules')));
 app.use('/scripts', express.static(path.join(__dirname, 'public/js')));
@@ -74,7 +72,7 @@ app.route('/api/sala')
                             const resp = await createRoom(req.body);
                             let links = [];
                             for (const item of req.body.users) {
-                                links.push({link: `${req.headers.host}/${req.body.room}/${item.cod}`, nome: item.name, img: item.img});
+                                links.push({link: `${req.headers.host}/${req.body.room}/${item.cod}`, nome: item.name, img: item.img, cod: item.cod, room: req.body.room});
                             }
                             if (resp.n === 1) {
                                 res.status(201).send({

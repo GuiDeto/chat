@@ -117,8 +117,8 @@ function renderMessage(message) {
 function loadUsers(users) {
     var userRoom = '';
     for (const user of users) {
-        var stsUsr = user.status ? 'online_icon' : 'online_icon offline';
-        userRoom += '<li class="row"><div class="img_cont"><img src="' + user.img + '" class="rounded-circle user_img"><span class="' + stsUsr + '"></span></div><div class="user_info"><span>' + user.name + '</span><p>' + user.cargo + '</p></div></li>';
+        var stsUsr = user.status ? '<span class="online_icon" title="online"></span>' : '<span class="online_icon offline" title="off-line"></span>';
+        userRoom += '<li class="row"><div class="img_cont"><img src="' + user.img + '" class="rounded-circle user_img">'+ stsUsr +'</div><div class="user_info"><span>' + user.name + '</span><p>' + user.cargo + '</p></div></li>';
     }
     document.querySelector('#usersRoom').innerHTML = userRoom;
 }

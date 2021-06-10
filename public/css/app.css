@@ -55,6 +55,8 @@ html, body { overflow: hidden;background-color: rgba(255, 51, 221, 0); }
     color: rgb(0, 0, 0) !important;
     height: 60px !important;
     overflow-y: auto;
+    font-size: 12px;
+    font-family: system-ui;
 }
 
 .type_msg:focus {
@@ -102,8 +104,8 @@ html, body { overflow: hidden;background-color: rgba(255, 51, 221, 0); }
 }
 
 .user_img {
-    height: 70px;
-    width: 70px;
+    height: 50px;
+    width: 50px;
     border: 1.5px solid #f5f6fa;
 
 }
@@ -117,8 +119,8 @@ html, body { overflow: hidden;background-color: rgba(255, 51, 221, 0); }
 
 .img_cont {
     position: relative;
-    height: 70px;
-    width: 70px;
+    height: 50px;
+    width: 50px;
 }
 
 .img_cont_msg {
@@ -133,7 +135,7 @@ html, body { overflow: hidden;background-color: rgba(255, 51, 221, 0); }
     background-color: #4cd137;
     border-radius: 50%;
     bottom: 0.2em;
-    right: 0.4em;
+    right: 0em;
     border: 1.5px solid white;
 }
 
@@ -160,15 +162,14 @@ html, body { overflow: hidden;background-color: rgba(255, 51, 221, 0); }
 }
 
 .video_cam {
-    margin-left: 5px;
     margin-top: 5px;
 }
 
 .video_cam span {
     color: white;
-    font-size: 20px;
+    font-size: 15px;
     cursor: pointer;
-    margin-right: 20px;
+    margin-right: 10px;
 }
 
 .msg_cotainer {
@@ -179,6 +180,8 @@ html, body { overflow: hidden;background-color: rgba(255, 51, 221, 0); }
     background-color: #e4e4e4;
     padding: 0 3px 0 3px;
     position: relative;
+    font-family: system-ui;
+    font-size: 12px;
 }
 
 .msg_cotainer_send {
@@ -189,20 +192,22 @@ html, body { overflow: hidden;background-color: rgba(255, 51, 221, 0); }
     background-color: #b6ffaefa;
     padding: 0 3px 0 3px;
     position: relative;
+    font-family: system-ui;
+    font-size: 12px;
 }
 
 .msg_time {
     position: absolute;
     left: -50px;
-    bottom: -20px;
-    color: rgba(255, 255, 255, 0.5);
+    bottom: -25px;
+    color: rgba(89, 88, 88, 0.72);
     font-size: 8px;
 }
 
 .msg_time_send {
     position: absolute;
     right: -50px;
-    bottom: -20px;
+    bottom: -25px;
     color: rgb(0, 0, 0);
     font-size: 8px;
 }

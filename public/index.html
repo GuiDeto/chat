@@ -1,101 +1,107 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <title>Chat</title>
-    <link rel="stylesheet" href="/plgs/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="/styles/app.css" />
-    <link rel="stylesheet" href="/plgs/sweetalert2/dist/sweetalert2.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css">
-    <link rel="stylesheet" href="/plgs/dropzone/dist/min/dropzone.min.css">
-    <script src="/plgs/jquery/dist/jquery.slim.min.js"></script>
-    <script src="/plgs/socket.io-client/dist/socket.io.slim.js"></script>
-    <script src="/plgs/bootstrap/dist/js/bootstrap.min.js"></script>
-    <script src="/plgs/dropzone/dist/min/dropzone.min.js"></script>
-    <script src='/plgs/sweetalert2/dist/sweetalert2.min.js'></script>
-    
-  </head>
 
-  <body>
-    <div class="container-fluid h-100">
-      <div class="justify-content-center h-100">
-        <div class="p-0">
-          <ui class="contacts" id="usersRoom"></ui>
-        </div>
-        <div class="p-0 chat">
-          <div class="card">
-            <div class="card-header msg_head">
-              <div class="d-flex bd-highlight">
-                <div class="img_cont" id='myPicture'></div>
-                <div class="user_info col-6">
-                  <span>Conciliação</span>
-                  <p>Beta 0.0.3</p>
-                </div>
-                <div class="video_cam col-6">
-                  <span><i class="fas fa-video"></i></span>
-                  <span><i class="fas fa-phone"></i></span>
-                </div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  <title>Chat</title>
+  <link rel="stylesheet" href="/plgs/bootstrap/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="/styles/app.css" />
+  <link rel="stylesheet" href="/plgs/sweetalert2/dist/sweetalert2.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css">
+  <link rel="stylesheet" href="/plgs/dropzone/dist/min/dropzone.min.css">
+  <script src="/plgs/jquery/dist/jquery.slim.min.js"></script>
+  <script src="/plgs/socket.io-client/dist/socket.io.slim.js"></script>
+  <script src="/plgs/bootstrap/dist/js/bootstrap.min.js"></script>
+  <script src="/plgs/dropzone/dist/min/dropzone.min.js"></script>
+  <script src='/plgs/sweetalert2/dist/sweetalert2.min.js'></script>
+
+</head>
+
+<body>
+  <div class="container-fluid w-100 p-0">
+
+    <div class="p-2">
+      <ui class="contacts" id="usersRoom"></ui>
+    </div>
+    <div class="p-1 chat m-0">
+      <div class="card">
+        <div class="card-header msg_head">
+          <div class="row bd-highlight">
+            <div class="col-6 text-left p-0">
+              <div class="img_cont" id='myPicture'></div>
+            </div>
+            
+            <div class="video_cam col-6 text-right">
+              <div class="row float-right">
+                <span><i class="fas fa-video"></i></span>
+                <span><i class="fas fa-phone"></i></span>
               </div>
             </div>
+          </div>
+        </div>
 
-            <div class="card-body msg_card_body scrollbar" id="historyMessage"></div>
+        <div class="card-body msg_card_body scrollbar" id="historyMessage"></div>
 
-            <div class="card-footer">
-              <div class="input-group">
-                <div class="input-group-append">
-                  <span class="input-group-text attach_btn" data-toggle="modal" data-target=".modal"
-                    ><i class="fas fa-paperclip"></i></span>
-                </div>
-                <textarea name="message" class="form-control type_msg" placeholder="Digite sua mensagem..." id="messageUsr" ></textarea>
-                <div class="input-group-append" id="btnSendMessage" onclick="sendMessage()">
-                  <span class="input-group-text send_btn"
-                    ><i class="fas fa-share"></i
-                  ></span>
-                </div>
-              </div>
+        <div class="card-footer">
+          <div class="input-group">
+            <div class="input-group-append">
+              <span class="input-group-text attach_btn" data-toggle="modal" data-target=".modal"><i
+                  class="fas fa-paperclip"></i></span>
+            </div>
+            <textarea name="message" class="form-control type_msg" placeholder="Digite sua mensagem..."
+              id="messageUsr"></textarea>
+            <div class="input-group-append" id="btnSendMessage" onclick="sendMessage()">
+              <span class="input-group-text send_btn"><i class="fas fa-share"></i></span>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="modal fade w-97" id='upload-modal' role="dialog" aria-hidden="true">
-      <div class="modal-dialog modal-sm">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Envie arquivos</h5>
-            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-              <span aria-hidden="true">&times;</span>
-            </button>
-          </div>
-          <div class="modal-body">
-            <form id="dropchatfiles" method="post" enctype="multipart/form-data" class="dropzone">
-              <div class="fallback d-none">
-                <input name="source_file" id='send_file_chat' type="file"/>
-              </div>
-              <div class="row">
-                  <div class="form-group col-lg-6 col-sm-12">
-                    <label for="">Tipo do arquivo</label>
-                    <select class="custom-select" name="tipo_arquivo" id="tipo_arquivo">
-                        <option selected disabled>Selecione</option>
-                        <option>Proposta de acordo</option>
-                        <option>Acordo</option>
-                        <option>Documentos</option>
-                    </select>
-                    <small class="text-muted">Tipo de arquivo a ser enviado</small>
-                </div>
+  </div>
+
+  <div class="modal fade w-97" id='upload-modal' role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Envie arquivos</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form id="dropchatfiles" method="post" enctype="multipart/form-data" class="dropzone">
+            <div class="fallback d-none">
+              <input name="source_file" id='send_file_chat' type="file" />
             </div>
-            </form>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-dismiss="modal">Fechar</button>
-          </div>
+            <div class="row">
+              <div class="form-group col-lg-6 col-sm-12">
+                <label for="">Tipo do arquivo</label>
+                <select class="custom-select" name="tipo_arquivo" id="tipo_arquivo">
+                  <option selected disabled>Selecione</option>
+                  <option>Proposta de acordo</option>
+                  <option>Acordo</option>
+                  <option>Documentos</option>
+                </select>
+                <small class="text-muted">Tipo de arquivo a ser enviado</small>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Fechar</button>
         </div>
       </div>
     </div>
-    <script>const room = "<%- b %>"; const user = "<%- u %>"; const ipUsr =  "<%- ip %>";</script>
-    <script src="/scripts/app.min.js"></script>
-  </body>
+  </div>
+  <script>
+    const room = "<%- b %>";
+    const user = "<%- u %>";
+    const ipUsr = "<%- ip %>";
+  </script>
+  <script src="/scripts/app.min.js"></script>
+</body>
+
 </html>
