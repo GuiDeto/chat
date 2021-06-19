@@ -30,8 +30,6 @@ function timeSince(date) {
     return `${horaF}:${minF}:${segF} ${diaF}/${mesF}/${anoF}`;
 }
 
-
-
 const messageUsr = document.querySelectorAll(".type_msg")[0];
 window.onload = function () {
     let src = '/sounds/beep.mp3';
