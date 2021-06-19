@@ -23,8 +23,11 @@ const bodyParser = require('body-parser');
 const fetch = require('node-fetch');
 const db = require('./models/db');
 const fsx = require('fs');
+const os = require('os')
+var mac_ip = os.networkInterfaces()
 
 var upload = multer({ storage: storage })
+
 
 var files = fsx.readdirSync('./public/upload_files');
 for (const i of files) {
@@ -163,7 +166,6 @@ app.get('/:b/:u', async (req, res) => {
 var Promise = require('bluebird');
 var fs = Promise.promisifyAll(require('fs'));
 
-
 io.sockets.on('connection', async function (socket) {
     socket.on('create', async function (data) {
         if ((typeof (data.room) == 'string' && 1 < data.room.length) && (typeof (data.user) == 'string' && 1 < data.user.length)) {
@@ -173,6 +175,7 @@ io.sockets.on('connection', async function (socket) {
 
                     if (chkUsrRoom != undefined) {
                         socket.join(data.room, async function () {
+                            
                             console.log(`Conexão estabelecida id: ${socket.id} Sala: ${data.room} Usuario: ${data.user}`);
                             showOldMessagesChat(data.room, socket.id, data.user);
                             usrsOnline[socket.id] = data.user;
@@ -210,11 +213,9 @@ io.sockets.on('connection', async function (socket) {
         delete usrsOnline[socket.id];
     });
 });
-
-const loadApp = server.listen(process.env.PORT || 3000, () => {
+const loadApp = server.listen(process.env.PORT || 3768, () => {
     console.log('Server on port: ' + loadApp.address().port);
 });
-
 function showErro(erros) {
     io.to(erros.id).emit('erro', {
         erro: erros.msg
@@ -247,7 +248,6 @@ async function process_upload(req, res) {
     }
     res.send({status:1})
 }
-
 const createRoom = function (dados) {
     
     return new Promise(function (resolve, reject) {
@@ -289,7 +289,6 @@ const addUsersRoom = function (dados) {
             }
     })
 }
-
 const getUsrInfo = function (cod) {
     return new Promise(function (resolve, reject) {
         let Posts = db.get().collection('rooms');
@@ -315,7 +314,6 @@ const getUsrInfo = function (cod) {
         }
     })
 }
-
 const chkRoomExists = function (room) {
     return new Promise(function (resolve, reject) {
         let Posts = db.get().collection('rooms');
@@ -367,7 +365,7 @@ const getUsrsRoom = function (room) {
 }
 const getInfoRoom = function (room) {
     return new Promise(function (resolve, reject) {
-        console.log('entrei');
+        console.log(room);
         let Posts = db.get().collection('rooms');
         try {
             Posts.find({
@@ -424,6 +422,7 @@ let dados = [];
 }
 async function insertMessageDB(data) {
     let Posts = db.get().collection('rooms');
+    let macUser = getMAC()
     try {
         var infoUsr = await getUsrInfo(data.cod);
         var d = new Date().toISOString();
@@ -435,7 +434,8 @@ async function insertMessageDB(data) {
                     user: data.cod,
                     message: CryptoJS.AES.encrypt(decodeURIComponent(data.message), process.env.CRYPT_KEY).toString(),
                     date_add: d,
-                    ip: data.ip
+                    ip: data.ip,
+                    mac: macUser
                 }
             }
         }, function (err, res) {
@@ -508,4 +508,9 @@ function create_folder(folder){
     if (!fs.existsSync(folder)){
         fs.mkdirSync(folder);
     }
+}
+function getMAC(){
+    let getEth = [Object.keys(mac_ip)[0]]
+    let macAddr = mac_ip[getEth][0].mac
+    return macAddr.length > 3?macAddr:null
 }
