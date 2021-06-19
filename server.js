@@ -479,7 +479,6 @@ async function insertInfoUsrDb(data) {
         }
     })
 }
-
 async function getIPInfo(ip) {
     let response = await fetch('https://ipapi.co/'+ip+'/json');
 

@@ -166,8 +166,10 @@ let config_drop = {
         });
     }
 }
+
 let configDropZone = { ...config_drop, ...dropzone_config }
 
-document.getElementById('tipo_arquivo').addEventListener("change", (e) => {
-    if (!dropzoneExists('.dropzone') && e.target.value != null) ($(".dropzone").dropzone(configDropZone), $('.fallback').removeClass('d-none'));
-})
+async function selectTipoArquivoEnviar(val){
+    console.log(val);
+    if (!dropzoneExists('.dropzone') && val != null) ($(".dropzone").dropzone(configDropZone), $('.fallback').removeClass('d-none'));
+}
