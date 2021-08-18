@@ -170,6 +170,5 @@ let config_drop = {
 let configDropZone = { ...config_drop, ...dropzone_config }
 
 async function selectTipoArquivoEnviar(val){
-    console.log(val);
     if (!dropzoneExists('.dropzone') && val != null) ($(".dropzone").dropzone(configDropZone), $('.fallback').removeClass('d-none'));
 }

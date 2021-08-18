@@ -46,10 +46,10 @@
 
         <div class="card-footer">
           <div class="input-group">
-            <div class="input-group-append">
+            <!-- <div class="input-group-append">
               <span class="input-group-text attach_btn" data-toggle="modal" data-target=".modal"><i
                   class="fas fa-paperclip"></i></span>
-            </div>
+            </div> -->
             <textarea name="message" class="form-control type_msg" placeholder="Digite sua mensagem..."
               id="messageUsr"></textarea>
             <div class="input-group-append" id="btnSendMessage" onclick="sendMessage()">
@@ -104,12 +104,14 @@
             </div>
           </form>
         </div>
+
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-dismiss="modal">Fechar</button>
         </div>
       </div>
     </div>
   </div>
+
   <script>
     const room = "<%- b %>";
     const user = "<%- u %>";
