@@ -31,16 +31,9 @@ var upload = multer({ storage: storage })
 
 var files = fsx.readdirSync('./public/upload_files');
 for (const i of files) {
-    if(i!=='.gitignore')deleteFile(i);
+    if(i!=='.gitignore')fsx.rmdirSync( path.join(__dirname, 'public/upload_files/' + i), { recursive: true });
 }
-function deleteFile(n){
-    fsx.unlink('./public/upload_files/'+n, (err) => {
-        if (err) {
-          console.error(err)
-          return
-        }
-    })
-}
+
 
 db.connect(process.env.MONGO_URL, (err)=> {
     if (err) {
@@ -112,11 +105,15 @@ app.route('/api/sala')
                 success: false
             });
         }
-    });
-app.route('/api/:room/:cod').put(async function (req, res) {
-    if (req.params.cod === process.env.API_CHAT_KEY) {
+    })
+
+app.route('/api/:room/:cod')
+.put(async function (req, res) {
+    
+    if (req.headers.authorization === process.env.API_CHAT_KEY) {
+        
         try {
-            if(req.body.room.length && req.body.name.length && req.body.cod.length && req.body.img.length && req.body.cargo.length  ){
+            if(req.body.room && req.body.name && req.body.cod && req.body.img && req.body.cargo  ){
                 const chkRoom = await chkRoomExists(req.body.room);
                 if(chkRoom){
                     const resp = await addUsersRoom(req.body);
@@ -150,7 +147,7 @@ app.route('/api/:room/:cod').put(async function (req, res) {
             assert.equal(null, error);
         }
     } else {
-        res.send(req).status('404');
+        res.send().status('404');
     }
 });
 
@@ -164,6 +161,7 @@ app.get('/:b/:u', async (req, res) => {
 });
 
 var Promise = require('bluebird');
+const { CLIENT_RENEG_LIMIT } = require('tls');
 var fs = Promise.promisifyAll(require('fs'));
 
 io.sockets.on('connection', async function (socket) {
