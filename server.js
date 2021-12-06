@@ -6,13 +6,13 @@ const sanitize = require("sanitize-filename")
 const multer = require('multer')
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-      cb(null, 'public/upload_files/')
+        cb(null, 'public/upload_files/')
     },
     filename: function (req, file, cb) {
-      const uniqueSuffix = Date.now() + '-' + sanitize(file.originalname.toLowerCase())
-      cb(null, uniqueSuffix)
+        const uniqueSuffix = Date.now() + '-' + sanitize(file.originalname.toLowerCase())
+        cb(null, uniqueSuffix)
     }
-  })
+})
 const slugify = require('slugify')
 const app = express();
 const server = require('http').createServer(app);
@@ -31,11 +31,11 @@ var upload = multer({ storage: storage })
 
 var files = fsx.readdirSync('./public/upload_files');
 for (const i of files) {
-    if(i!=='.gitignore')fsx.rmdirSync( path.join(__dirname, 'public/upload_files/' + i), { recursive: true });
+    if (i !== '.gitignore') fsx.rmdirSync(path.join(__dirname, 'public/upload_files/' + i), { recursive: true });
 }
 
 
-db.connect(process.env.MONGO_URL, (err)=> {
+db.connect(process.env.MONGO_URL, (err) => {
     if (err) {
         console.log(err);
         process.exit(1)
@@ -47,7 +47,7 @@ app.use(bodyParser.json());
 
 app.set('views', path.join(__dirname, 'public'));
 app.engine('html', require('ejs').renderFile);
-app.use(bodyParser.urlencoded({extended: false}));
+app.use(bodyParser.urlencoded({ extended: false }));
 app.use('/favicon.ico', express.static('public/img/favicon.ico'));
 app.use('/plgs', express.static(path.join(__dirname, 'node_modules')));
 app.use('/scripts', express.static(path.join(__dirname, 'public/js')));
@@ -62,43 +62,43 @@ app.route('/api/sala')
     .post(async function (req, res) {
         if (req.headers.authorization === process.env.API_CHAT_KEY) {
             const chkRoom = await chkRoomExists(req.body.room);
-                if(!chkRoom){
-                    try {
-                        if(req.body.room.length>4){
-                            const resp = await createRoom(req.body);
-                            let links = [];
-                            for (const item of req.body.users) {
-                                links.push({link: `${req.headers.host}/${req.body.room}/${item.cod}`, nome: item.name, img: item.img, cod: item.cod, room: req.body.room});
-                            }
-                            if (resp.n === 1) {
-                                res.status(201).send({
-                                    success: true,
-                                    message: `Sala ${req.body.room} criada!`,
-                                    status: resp,
-                                    links: links
-                                });
-                            } else {
-                                res.status(500).send({
-                                    message: "Houve algum problema ao criar sala!",
-                                    status: resp,
-                                    success: false
-                                });
-                            }
-                        }else{
-                            res.status(400).send({
-                                success: false,
-                                message: `Sala ${req.body.room} não foi criada!`
+            if (!chkRoom) {
+                try {
+                    if (req.body.room.length > 4) {
+                        const resp = await createRoom(req.body);
+                        let links = [];
+                        for (const item of req.body.users) {
+                            links.push({ link: `${req.headers.host}/${req.body.room}/${item.cod}`, nome: item.name, img: item.img, cod: item.cod, room: req.body.room });
+                        }
+                        if (resp.n === 1) {
+                            res.status(201).send({
+                                success: true,
+                                message: `Sala ${req.body.room} criada!`,
+                                status: resp,
+                                links: links
+                            });
+                        } else {
+                            res.status(500).send({
+                                message: "Houve algum problema ao criar sala!",
+                                status: resp,
+                                success: false
                             });
                         }
-                    } catch (error) {
-                        assert.equal(null, error);
+                    } else {
+                        res.status(400).send({
+                            success: false,
+                            message: `Sala ${req.body.room} não foi criada!`
+                        });
                     }
-                }else{
-                    res.status(400).send({
-                        success: true,
-                        message: 'Está sala ('+req.body.room+') já existe!'
-                    });
+                } catch (error) {
+                    assert.equal(null, error);
                 }
+            } else {
+                res.status(400).send({
+                    success: true,
+                    message: 'Está sala (' + req.body.room + ') já existe!'
+                });
+            }
         } else {
             res.status(200).send({
                 message: "Chave da API invalida!",
@@ -108,57 +108,66 @@ app.route('/api/sala')
     })
 
 app.route('/api/:room/:cod')
-.put(async function (req, res) {
-    
-    if (req.headers.authorization === process.env.API_CHAT_KEY) {
-        
-        try {
-            if(req.body.room && req.body.name && req.body.cod && req.body.img && req.body.cargo  ){
-                const chkRoom = await chkRoomExists(req.body.room);
-                if(chkRoom){
-                    const resp = await addUsersRoom(req.body);
-                    if ( resp.n === 1) {
-                        res.status(202).send({
-                            success: true,
-                            message: `Novo integrante ${req.body.name} adicionado com sucesso`,
-                            sala: req.body.room,
-                            status: resp
-                        });
+    .put(async function (req, res) {
+
+        if (req.headers.authorization === process.env.API_CHAT_KEY) {
+
+            try {
+                if (req.body.room && req.body.name && req.body.cod && req.body.img && req.body.cargo) {
+                    const chkRoom = await chkRoomExists(req.body.room);
+                    if (chkRoom) {
+                        const resp = await addUsersRoom(req.body);
+                        if (resp.n === 1) {
+                            res.status(202).send({
+                                success: true,
+                                message: `Novo integrante ${req.body.name} adicionado com sucesso`,
+                                sala: req.body.room,
+                                status: resp
+                            });
+                        } else if(resp===false){
+                            res.status(203).send({
+                                message: 'Usuário já está na sala',
+                                status: false,
+                                success: false
+                            });
+                        }else{
+                            res.status(500).send({
+                                message: 'Houve algum problema ao adicionar usuário!',
+                                status: resp,
+                                success: false
+                            });
+                        }
                     } else {
-                        res.status(500).send({
-                            message: 'Houve algum problema ao adicionar usuário!',
-                            status: resp,
+                        res.status(400).send({
+                            message: 'Sala não existe!',
                             success: false
                         });
                     }
-                }else{
+                } else {
                     res.status(400).send({
-                        message: 'Sala não existe!',
+                        message: "Falta informações!",
                         success: false
                     });
                 }
-            }else{
-                res.status(400).send({
-                    message: "Falta informações!",
-                    success: false
-                });
+            } catch (error) {
+                assert.equal(null, error);
             }
-        } catch (error) {
-            assert.equal(null, error);
+        } else {
+            res.send().status('404');
         }
-    } else {
-        res.send().status('404');
-    }
-});
+    });
 
 app.get('/:b/:u', async (req, res) => {
-    var newLog = await insertInfoUsrDb({cod:req.params.u, room:req.params.b, ip:req.connection.remoteAddress, tipo:'logou'});
+    var newLog = await insertInfoUsrDb({ cod: req.params.u, room: req.params.b, ip: req.connection.remoteAddress, tipo: 'logou' });
 
     req.params = Object.assign(req.params, {
         ip: req.connection.remoteAddress
     });
     res.render('index.html', req.params);
 });
+app.get('/find/:room/:coduser', async (req, res) => {
+    console.log( findUserRoom(req.params.coduser, req.params.room) )
+})
 
 var Promise = require('bluebird');
 const { CLIENT_RENEG_LIMIT } = require('tls');
@@ -167,36 +176,36 @@ var fs = Promise.promisifyAll(require('fs'));
 io.sockets.on('connection', async function (socket) {
     socket.on('create', async function (data) {
         if ((typeof (data.room) == 'string' && 1 < data.room.length) && (typeof (data.user) == 'string' && 1 < data.user.length)) {
-                const infoRoom = await getInfoRoom(data.room);
-                if (infoRoom != undefined) {
-                    const chkUsrRoom = searchJSON(infoRoom.users, data.user);
+            const infoRoom = await getInfoRoom(data.room);
+            if (infoRoom != undefined) {
+                const chkUsrRoom = searchJSON(infoRoom.users, data.user);
 
-                    if (chkUsrRoom != undefined) {
-                        socket.join(data.room, async function () {
-                            
-                            console.log(`Conexão estabelecida id: ${socket.id} Sala: ${data.room} Usuario: ${data.user}`);
-                            showOldMessagesChat(data.room, socket.id, data.user);
-                            usrsOnline[socket.id] = data.user;
-                            const usersRoom = await getUsrsRoom(data.room);
-                            io.in(data.room).emit('loadUsersRoom', usersRoom);
+                if (chkUsrRoom != undefined) {
+                    socket.join(data.room, async function () {
 
-                            const showUserData = await getUsrInfo(data.user);
-                            io.to(socket.id).emit('loadMyPicture', {
-                                img: showUserData.img
-                            });
+                        console.log(`Conexão estabelecida id: ${socket.id} Sala: ${data.room} Usuario: ${data.user}`);
+                        showOldMessagesChat(data.room, socket.id, data.user);
+                        usrsOnline[socket.id] = data.user;
+                        const usersRoom = await getUsrsRoom(data.room);
+                        io.in(data.room).emit('loadUsersRoom', usersRoom);
+
+                        const showUserData = await getUsrInfo(data.user);
+                        io.to(socket.id).emit('loadMyPicture', {
+                            img: showUserData.img
                         });
-                    } else {
-                        showErro({
-                            msg: 'Você não está cadastrado nessa sala!',
-                            id: socket.id
-                        });
-                    }
+                    });
                 } else {
                     showErro({
-                        msg: 'Caminho incorreto!<br>Verifique o endereço corretamente!',
+                        msg: 'Você não está cadastrado nessa sala!',
                         id: socket.id
                     });
                 }
+            } else {
+                showErro({
+                    msg: 'Caminho incorreto!<br>Verifique o endereço corretamente!',
+                    id: socket.id
+                });
+            }
         } else {
             showErro({
                 msg: 'Dados incorretos para montar a sala!',
@@ -225,18 +234,18 @@ async function process_upload(req, res) {
         var room = req.headers.referer.split('/')[3];
         var cdgUsr = req.headers.referer.split('/')[4];
         var sanitized_filename = sanitize(req.file.originalname.toLowerCase());
-        
+
         var num_caso = 'asd-f345afssf-fasdf32-fasdf'
 
         create_folder(upload_dir + num_caso);
         let name_file = slugify(req.body.tipo_arquivo) + '_' + slugify(req.file.filename)
         let destFile = upload_dir + num_caso + '/' + name_file
-        
-        fs.copyFile( upload_dir + req.file.filename, destFile, fs.constants.COPYFILE_EXCL, (err) => {
-            if (err)console.log("Error Found:", err)
+
+        fs.copyFile(upload_dir + req.file.filename, destFile, fs.constants.COPYFILE_EXCL, (err) => {
+            if (err) console.log("Error Found:", err)
             else console.log("\nFile Contents of copied_file:")
         })
-        
+
         insertMessageDB({
             cod: cdgUsr,
             room: room,
@@ -244,13 +253,13 @@ async function process_upload(req, res) {
             ip: req.connection.remoteAddress
         });
     }
-    res.send({status:1})
+    res.send({ status: 1 })
 }
 const createRoom = function (dados) {
-    
+
     return new Promise(function (resolve, reject) {
         let Posts = db.get().collection('rooms');
-        try{
+        try {
             Posts.insertOne({
                 room: dados.room,
                 id: dados.id,
@@ -264,9 +273,13 @@ const createRoom = function (dados) {
         }
     })
 }
-const addUsersRoom = function (dados) {
-    return new Promise(function (resolve, reject) {
-        let Posts = db.get().collection('rooms');
+const addUsersRoom = async function (dados) {
+    const userExists = await findUserRoom(dados.cod, dados.room)
+    
+    if( !userExists ){
+
+        return new Promise(function (resolve, reject) {
+            let Posts = db.get().collection('rooms');
             try {
                 Posts.updateOne({
                     room: dados.room
@@ -285,12 +298,16 @@ const addUsersRoom = function (dados) {
             } catch (error) {
                 assert.equal(null, error);
             }
-    })
+        })
+
+    }else{
+        return false
+    }
 }
 const getUsrInfo = function (cod) {
     return new Promise(function (resolve, reject) {
         let Posts = db.get().collection('rooms');
-        try{
+        try {
             Posts.find({
                 users: {
                     $elemMatch: {
@@ -301,13 +318,13 @@ const getUsrInfo = function (cod) {
                 users: 1
             }).limit(1).toArray(function (err, docs) {
                 assert.strictEqual(null, err);
-                if(docs[0] && docs[0].users.length){
+                if (docs[0] && docs[0].users.length) {
                     var infoUsr = searchJSON(docs[0].users, cod);
                     var dados = docs[0].users[infoUsr];
                     resolve(dados);
                 }
             })
-        }catch(err){
+        } catch (err) {
             assert.equal(null, err);
         }
     })
@@ -322,9 +339,9 @@ const chkRoomExists = function (room) {
                 room: 1
             }).limit(1).toArray(function (err, docs) {
                 assert.equal(null, err);
-                if(docs.length && docs[0].room.length){
+                if (docs.length && docs[0].room.length) {
                     resolve(true);
-                }else{
+                } else {
                     resolve(false);
                 }
             });
@@ -363,7 +380,6 @@ const getUsrsRoom = function (room) {
 }
 const getInfoRoom = function (room) {
     return new Promise(function (resolve, reject) {
-        console.log(room);
         let Posts = db.get().collection('rooms');
         try {
             Posts.find({
@@ -376,15 +392,19 @@ const getInfoRoom = function (room) {
         }
     })
 }
+async function findUserRoom(userCod, sala) {
+    const user = await db.get().collection('rooms').findOne( { "room" : sala, "users.cod": userCod }, { "users": {$elemMatch:{"cod":userCod} } } )
+    return (user)?true:false
+}
 function showOldMessagesChat(r, sckId, usr) {
     let Posts = db.get().collection('rooms');
     try {
         Posts.find({
-        room: r
+            room: r
         }).limit(1).toArray(function (err, docs) {
             if (err) throw err;
             if (!isEmpty(docs[0].posts)) {
-            var roomData = docs[0];
+                var roomData = docs[0];
                 sendPreviousMessages(roomData, sckId, usr);
             }
         });
@@ -395,7 +415,7 @@ function showOldMessagesChat(r, sckId, usr) {
 function isEmpty(obj) {
     for (const key in obj) {
         if (obj.hasOwnProperty(key)) {
-            if(obj[key].length === 0)return true
+            if (obj[key].length === 0) return true
         }
     }
     return false;
@@ -410,10 +430,10 @@ async function montMsgsRoom(data) {
     };
 }
 async function sendPreviousMessages(messages, sckId, usr) {
-let dados = [];
+    let dados = [];
     for (const roomMsg of messages.posts) {
         var msg = CryptoJS.AES.decrypt(roomMsg.message, process.env.CRYPT_KEY).toString(CryptoJS.enc.Utf8);
-        const mstMsg = await montMsgsRoom( {cod: roomMsg.user, message:msg, date: roomMsg.date_add} ) ;
+        const mstMsg = await montMsgsRoom({ cod: roomMsg.user, message: msg, date: roomMsg.date_add });
         dados.push(mstMsg);
     }
     io.to(sckId).emit('previousMessage', dados);
@@ -451,7 +471,7 @@ async function insertMessageDB(data) {
     }
 }
 async function insertInfoUsrDb(data) {
-    return new Promise( async function(resolve, reject){
+    return new Promise(async function (resolve, reject) {
         let Posts = db.get().collection('rooms');
         try {
             var d = new Date().toISOString();
@@ -478,7 +498,7 @@ async function insertInfoUsrDb(data) {
     })
 }
 async function getIPInfo(ip) {
-    let response = await fetch('https://ipapi.co/'+ip+'/json');
+    let response = await fetch('https://ipapi.co/' + ip + '/json');
 
     if (response.ok) {
         return await response.json();
@@ -487,8 +507,8 @@ async function getIPInfo(ip) {
     }
 }
 function searchJSON(arr, s) {
-     for (var i = 0; i < arr.length; i++)
-         if (arr[i].cod == s)return i
+    for (var i = 0; i < arr.length; i++)
+        if (arr[i].cod == s) return i
 
 }
 function findArr(arr, s) {
@@ -501,13 +521,13 @@ function getUrlVars(url) {
     });
     return vars;
 }
-function create_folder(folder){
-    if (!fs.existsSync(folder)){
+function create_folder(folder) {
+    if (!fs.existsSync(folder)) {
         fs.mkdirSync(folder);
     }
 }
-function getMAC(){
+function getMAC() {
     let getEth = [Object.keys(mac_ip)[0]]
     let macAddr = mac_ip[getEth][0].mac
-    return macAddr.length > 3?macAddr:null
+    return macAddr.length > 3 ? macAddr : null
 }
